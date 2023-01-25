@@ -19,8 +19,9 @@ from positionFuncs import *
 RING_RADIUS = 100
 RING_HEIGHT = 30
 
+# Load data
+
 readFile = open('data/outData.pkl', 'rb')
-# readFile = open('data/data_sideAngle.pkl', 'rb')
 dataDict = pkl.load(readFile)
 readFile.close()
 
@@ -32,18 +33,13 @@ ptSize = np.array( dataDict['ptSize'] )
 
 confidenceVals = (ptSize + st.median(ptSize)) / max(ptSize + st.median(ptSize))
 
-# print(f"row:{row}")
-# print(f"col:{col}")
+# Correct row position
+for ii in range(len(row)):
+    row[ii] = (row[ii]+2)%3
 
 camVect_Z = np.ones_like(xAngle)
-# print(f"camVect_Z:{camVect_Z}")
-
 camVect_X = np.tan(xAngle)
-# print(f"camVect_X:{camVect_X}")
-
 camVect_Y = np.tan(yAngle)
-# print(f"camVect_Y:{camVect_Y}")
-
 
 print(f"xAngle   {min(xAngle)}   {max(xAngle)}")
 print(f"yAngle   {min(yAngle)}   {max(yAngle)}")
@@ -58,15 +54,17 @@ def basePoints(row, column):
     return([i_set, j_set, k_set])
 
 
-keepPts = np.where(ptSize > 10)
+if True: # Drop low-signifigance points
+    keepPts = np.where(ptSize > 10)
 
-row = row[keepPts]
-col = col[keepPts]
-ptSize = ptSize[keepPts]
-confidenceVals = confidenceVals[keepPts]
-camVect_Z = camVect_Z[keepPts]
-camVect_X = camVect_X[keepPts]
-camVect_Y = camVect_Y[keepPts]
+    row = row[keepPts]
+    col = col[keepPts]
+    ptSize = ptSize[keepPts]
+    confidenceVals = confidenceVals[keepPts]
+    camVect_Z = camVect_Z[keepPts]
+    camVect_X = camVect_X[keepPts]
+    camVect_Y = camVect_Y[keepPts]
+
 
 basePts = basePoints(row, col)
 inVects = [camVect_X, camVect_Y, camVect_Z]
@@ -94,7 +92,7 @@ for testIter in range(TEST_COUNT):
             outLog.write(f"{testIter}, {jj}, {error_best}, {motion_best[0]}, {motion_best[1]}, {motion_best[2]}, {motion_best[3]}, {motion_best[4]}, {motion_best[5]}, \n")
             motion_best = motion_test
             error_best = error_test
-
+            
 outLog.close()
 
 print(f"Final error: {round(error_best, 2)}, at {[round(foo, 3) for foo in motion_best]}")

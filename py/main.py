@@ -30,12 +30,8 @@ def adjacentImages(imgArr): # Place images into grid for easy comparison
     imgRows = []
     for fooRow in imgArr:
         concatRow = np.concatenate(fooRow, axis=1)
-        # if(len(fooRow) < rowMax):
-        #     concatRow = np.concatenate([concatRow] + [blankImg]*(rowMax - len(fooRow)), axis=1)
-        
         imgRows.append(concatRow)
     
-
     return(np.concatenate(imgRows, axis=0))
 
 

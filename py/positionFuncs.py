@@ -40,6 +40,7 @@ def doRotationMatrixes(inPts, rotations, transposed = False):
 
     return([xPts, yPts, zPts])
 
+
 def completeMotion(inPts, motion):
     offSets = motion[:3]
     rotations = motion[3:6]
@@ -50,6 +51,7 @@ def completeMotion(inPts, motion):
         ptSet[ii] += offSets[ii]    
     
     return(ptSet)
+
 
 def undoMotion(inPts, motion):
     offSets = motion[:3]
@@ -62,7 +64,6 @@ def undoMotion(inPts, motion):
     
     return(ptSet)
 
-
 def getClosestPts(inVectors, inPts):
     inPts = np.column_stack(inPts)
     inVectors = np.column_stack(inVectors)
@@ -73,7 +74,6 @@ def getClosestPts(inVectors, inPts):
     outPts = inVectors * tSet[:, None] # Converts NP array to 2d with only one element in row
     # print(outPts)
     return(outPts)
-
 
 def crossFixed(a:np.ndarray,b:np.ndarray)->np.ndarray: # Fix code unreachable error in some IDES
     return np.cross(a,b)
@@ -88,7 +88,7 @@ def getError(inVectors, inPts, ptSize):
     inVectors = np.column_stack(inVectors)
 
     distances = ptVectDistSquared(inVectors, inPts)
-    distances *= ptSize
+    # distances *= ptSize
     return( np.sum(distances) )
 
 def testError(inVectors, inPts, motion, ptSize):

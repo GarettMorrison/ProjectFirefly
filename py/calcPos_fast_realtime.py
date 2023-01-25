@@ -37,14 +37,8 @@ xAngle = np.array( dataDict['xAngle'] )
 yAngle = np.array( dataDict['yAngle'] )
 ptSize = np.array( dataDict['ptSize'] )
 
-
 # plt.scatter(xAngle, yAngle)
 # plt.show()
-
-
-# Correct row position
-for ii in range(len(row)):
-    row[ii] = (row[ii]+2)%3
 
 confidenceVals = (ptSize + st.median(ptSize)) / max(ptSize + st.median(ptSize))
 
@@ -59,7 +53,6 @@ print(f"camVect_X   {min(camVect_X)}   {max(camVect_X)}")
 print(f"camVect_Y   {min(camVect_Y)}   {max(camVect_Y)}")
 
 def basePoints(row, column):
-    row = (row+2)%3
     i_set = RING_RADIUS * np.cos(col*2*np.pi/37)
     j_set = RING_RADIUS * np.sin(col*2*np.pi/37)
     k_set = (row-1) * RING_HEIGHT
@@ -93,7 +86,7 @@ POST_RAND_COUNT = 1500
 
 
 outLog = open('data/PositionLog.csv', 'w')
-outLog.write(f"TestIteration, Error, X, Y, Z, Rx, Ry, Rz, \n")
+# outLog.write(f"TestIteration, Error, X, Y, Z, Rx, Ry, Rz, \n")
 
 movePts = []
 
@@ -103,8 +96,10 @@ pos_factors = [1000, 1000, 1000, 1, 1, 1]
 inVects_all = deepcopy(inVects)
 basePts_all = deepcopy(basePts)
 
-divCount = 4
-divRange = 30
+divCount = 2
+divRange = 10
+maxError_allowed = 0.012
+
 for fooTest in range((len(inVects[0])-divRange)//divCount):
     if fooTest > 0:   
         TEST_COUNT = 200
@@ -140,8 +135,7 @@ for fooTest in range((len(inVects[0])-divRange)//divCount):
                 
                 # print(f"{testIter} {jj}: {round(error_best, 4)}   now   {[round(foo, 2) for foo in motion_best]}")
                 # error_best = testError(inVects, basePts, motion_best, ptSize)
-                outLog.write(f"{testIter}, {jj}, {error_best}, {motion_best[0]}, {motion_best[1]}, {motion_best[2]}, {motion_best[3]}, {motion_best[4]}, {motion_best[5]}, randTranslation\n")
-
+                
     # Do more precise adjustments
     for testIter in range(TEST_COUNT):
         # print(f"\n{testIter}   {motion_best}")
@@ -183,8 +177,6 @@ for fooTest in range((len(inVects[0])-divRange)//divCount):
         # print(f"{testIter} {jj}: {round(error_best, 4)}   now   {[round(foo, 2) for foo in motion_best]}")
 
         # error_best = testError(inVects, basePts, motion_best, ptSize)
-        outLog.write(f"{testIter}, {jj}, {error_best}, {motion_best[0]}, {motion_best[1]}, {motion_best[2]}, {motion_best[3]}, {motion_best[4]}, {motion_best[5]}, calcTranslateAndRandRotation\n")
-        
         posHist.append(deepcopy(motion_best))
 
 
@@ -208,8 +200,6 @@ for fooTest in range((len(inVects[0])-divRange)//divCount):
             
             # print(f"{testIter} {jj}: {round(error_best, 4)}   now   {[round(foo, 2) for foo in motion_best]}")
             # error_best = testError(inVects, basePts, motion_best, ptSize)
-            outLog.write(f"{testIter}, {jj}, {error_best}, {motion_best[0]}, {motion_best[1]}, {motion_best[2]}, {motion_best[3]}, {motion_best[4]}, {motion_best[5]}, randAll\n")
-
 
     # fig = plt.figure()
     # ax = fig.add_subplot(projection='3d')
@@ -224,10 +214,15 @@ for fooTest in range((len(inVects[0])-divRange)//divCount):
     # set_axes_equal(ax)
     # plt.show()
 
+    if error_best > maxError_allowed:
+        print(f"Final error: {round(error_best, 3)}, skipping run")
+        continue
     
-    print(f"Final error: {round(error_best, 2)}, at {[round(foo, 3) for foo in motion_best]}")
-    for foo in motion_best: print(round(foo,2), end = '   ')
+    print(f"Final error: {round(error_best, 3)}")
+    for foo in motion_best: print(round(foo,3), end = '   ')
     print('\n')
+
+    
     movePts.append(motion_best)
 
     outLog.write(f"{fooTest}, {error_best}, {motion_best[0]}, {motion_best[1]}, {motion_best[2]}, {motion_best[3]}, {motion_best[4]}, {motion_best[5]}, \n")

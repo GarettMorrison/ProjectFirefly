@@ -27,18 +27,11 @@ readFile = open('data/outData.pkl', 'rb')
 dataDict = pkl.load(readFile)
 readFile.close()
 
-for foo in dataDict: print(f"{foo}:{dataDict[foo]}\n\n")
-
 row = np.array( dataDict['row'] )
 col = np.array( dataDict['col'] )
 xAngle = np.array( dataDict['xAngle'] )
 yAngle = np.array( dataDict['yAngle'] )
 ptSize = np.array( dataDict['ptSize'] )
-
-
-# Correct row position
-for ii in range(len(row)):
-    row[ii] = (row[ii]+2)%3
 
 confidenceVals = (ptSize + st.median(ptSize)) / max(ptSize + st.median(ptSize))
 
@@ -95,23 +88,6 @@ posHist = []
 
 pos_factors = [1000, 1000, 1000, 1, 1, 1]
 
-# Do random guess correction
-for testIter in range(RAND_COUNT):
-    for jj in range(6):
-        motion_test = deepcopy(motion_best)
-        motion_test[jj] += pos_factors[jj]*(2*r.random()-1)
-        error_test = testError(inVects, basePts, motion_test, ptSize)
-
-        if error_test < error_best:
-            # print(f"Error reduced by ({jj}) at {testIter}: {round(error_best, 4)}   ->   {round(error_test, 4)}   now   {[round(foo, 2) for foo in motion_best]}")
-            # outLog.write(f"{testIter}, {jj}, {error_best}, {motion_best[0]}, {motion_best[1]}, {motion_best[2]}, {motion_best[3]}, {motion_best[4]}, {motion_best[5]}, \n")
-            motion_best = motion_test
-            error_best = error_test    
-            
-            print(f"{testIter} {jj}: {round(error_best, 4)}   now   {[round(foo, 2) for foo in motion_best]}")
-            # error_best = testError(inVects, basePts, motion_best, ptSize)
-            outLog.write(f"{testIter}, {jj}, {error_best}, {motion_best[0]}, {motion_best[1]}, {motion_best[2]}, {motion_best[3]}, {motion_best[4]}, {motion_best[5]}, randTranslation\n")
-
 # Do more precise adjustments
 for testIter in range(TEST_COUNT):
     # print(f"\n{testIter}   {motion_best}")
@@ -161,8 +137,8 @@ for testIter in range(TEST_COUNT):
     # closestPts_base = undoMotion(closestPts, motion_best)
     # basePts_stack = np.column_stack(basePts)
 
-    # def avg_atan_drop(A, B):
-    #     return( np.average( np.arctan(np.divide(A, B, out=np.zeros_like(A), where=B!=0) )))
+    def avg_atan_drop(A, B):
+        return( np.average( np.arctan(np.divide(A, B, out=np.zeros_like(A), where=B!=0) )))
 
     # xRotation = avg_atan_drop(closestPts_base[2],closestPts_base[1]) - avg_atan_drop(basePts_stack[2],basePts_stack[1])
     # yRotation = avg_atan_drop(closestPts_base[0],closestPts_base[2]) - avg_atan_drop(basePts_stack[0],basePts_stack[2])
@@ -175,36 +151,39 @@ for testIter in range(TEST_COUNT):
 
 
     # Test rotation adjustment
+    if False:
+        # Get current and closest points
+        currPts = completeMotion(basePts, motion_best) # Get points at current position
+        curr_pairs = np.column_stack(currPts) # 
+        closestPts = getClosestPts(inVects, currPts)
+        closPts = np.column_stack(closestPts)
 
-    # currPts = completeMotion(basePts, motion_best)
-    # curr_pairs = np.column_stack(currPts)
-    # closestPts = getClosestPts(inVects, currPts)
-    # closPts = np.column_stack(closestPts)
-
-    # closestPts_base = undoMotion(closPts, motion_best)
-    # basePts_stack = np.column_stack(basePts)
+        # Get closest points to base
+        closestPts_base = undoMotion(closPts, motion_best)
+        basePts_stack = np.column_stack(basePts)
 
 
-    # xRotation = avg_atan_drop(closestPts_base[2],closestPts_base[1]) - avg_atan_drop(basePts[2],basePts[1])
-    # motion_best[3] += xRotation * adjustmentFactor
-    # yRotation = avg_atan_drop(closestPts_base[0],closestPts_base[2]) - avg_atan_drop(basePts[0],basePts[2])
-    # motion_best[4] += yRotation * adjustmentFactor
-    # zRotation = avg_atan_drop(closestPts_base[1],closestPts_base[0]) - avg_atan_drop(basePts[1],basePts[0])
-    # motion_best[5] += zRotation * adjustmentFactor
+        xRotation = avg_atan_drop(closestPts_base[2],closestPts_base[1]) - avg_atan_drop(basePts[2],basePts[1])
+        motion_best[3] += xRotation * adjustmentFactor
+        yRotation = avg_atan_drop(closestPts_base[0],closestPts_base[2]) - avg_atan_drop(basePts[0],basePts[2])
+        motion_best[4] += yRotation * adjustmentFactor
+        zRotation = avg_atan_drop(closestPts_base[1],closestPts_base[0]) - avg_atan_drop(basePts[1],basePts[0])
+        motion_best[5] += zRotation * adjustmentFactor
 
 
     # Random rotation adjustment
-    
-    jj = int(r.random()*3+3)
-    motion_test = deepcopy(motion_best)
-    motion_test[jj] += pos_factors[jj]*(2*r.random()-1)
-    error_test = testError(inVects, basePts, motion_test, ptSize)
+    # For if translation works but not rotation
+    if False:
+        jj = int(r.random()*3+3)
+        motion_test = deepcopy(motion_best)
+        motion_test[jj] += pos_factors[jj]*(2*r.random()-1)
+        error_test = testError(inVects, basePts, motion_test, ptSize)
 
-    if error_test < error_best:
-        # print(f"Error reduced by ({jj}) at {testIter}: {round(error_best, 4)}   ->   {round(error_test, 4)}   now   {[round(foo, 2) for foo in motion_best]}")
-        # outLog.write(f"{testIter}, {jj}, {error_best}, {motion_best[0]}, {motion_best[1]}, {motion_best[2]}, {motion_best[3]}, {motion_best[4]}, {motion_best[5]}, \n")
-        motion_best = motion_test
-        error_best = error_test
+        if error_test < error_best:
+            # print(f"Error reduced by ({jj}) at {testIter}: {round(error_best, 4)}   ->   {round(error_test, 4)}   now   {[round(foo, 2) for foo in motion_best]}")
+            # outLog.write(f"{testIter}, {jj}, {error_best}, {motion_best[0]}, {motion_best[1]}, {motion_best[2]}, {motion_best[3]}, {motion_best[4]}, {motion_best[5]}, \n")
+            motion_best = motion_test
+            error_best = error_test
 
 
   

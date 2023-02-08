@@ -75,7 +75,7 @@ def plotJustLEDPos(LED_X, LED_Y, LED_Z):
             colVal = 1.0*ii/ptCount
             plotColor.append([1.0-colVal, 0.0, 0.0])
 
-    ax.scatter(LED_X, LED_Y, LED_Z, color=plotColor)
+    ax.scatter(LED_X, LED_Y, LED_Z, color=plotColor, depthshade=False)
 
 
 

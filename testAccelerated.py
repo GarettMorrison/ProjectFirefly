@@ -1,11 +1,16 @@
 import os
 import pickle as pkl
 import numpy as np
+import statistics as st
 
 from py.positionFuncs import *
-# import py.plot3D as plot3D
 
 import swig.FastFireFly as FFF
+
+doPlot3d = True
+if doPlot3d: import py.plot3D as plot3D
+
+
 
 # Find data files to load
 existingFiles = os.listdir('data/')
@@ -21,10 +26,15 @@ for fileName in existingFiles:
     inFile.close()
     dataRuns.append(readDict)
 
+
+    for foo in readDict:
+        print(f"{foo}:{len(readDict[foo])}")
+
 # LED Positions by index
-LED_X = np.array( [112.5833025, 91.92388155, 65, 0, 0, 0, -112.5833025, -91.92388155, -65, 0, 0, 0] )
-LED_Y = np.array( [0, 0, 0, -65, -91.92388155, -112.5833025, 0, 0, 0, 65, 91.92388155, 112.5833025] )
-LED_Z = np.array( [68, 94.92388155, 115.5833025, 115.5833025, 94.92388155, 68, 68, 94.92388155, 115.5833025, 115.5833025, 94.92388155, 68] )
+LED_X = np.array( [ 112.5833025, 91.92388155, 65, 32.5, 45.96194078, 56.29165125, -56.29165125, -45.96194078, -32.5, -65, -91.92388155, -112.5833025, -56.29165125, -45.96194078, -32.5, 32.5, 45.96194078, 56.29165125, ] )
+LED_Y = np.array( [ 65, 91.92388155, 112.5833025, 112.5833025, 91.92388155, 65, 65, 91.92388155, 112.5833025, 112.5833025, 91.92388155, 65, 65, 91.92388155, 112.5833025, 112.5833025, 91.92388155, 65, ] )
+LED_Z = np.array( [ 0, 0, 0, -56.29165125, -79.60841664, -97.5, -97.5, -79.60841664, -56.29165125, 0, 0, 0, 97.5, 79.60841664, 56.29165125, 56.29165125, 79.60841664, 97.5, ] )
+
 
 # # Set plot color to position range 
 # plotColor = []
@@ -32,8 +42,9 @@ LED_Z = np.array( [68, 94.92388155, 115.5833025, 115.5833025, 94.92388155, 68, 6
 # plotColor = np.array(plotColor)
 
 # # Plot just LED positions for demo purposes
-# plot3D.plotJustLEDPos(LED_X, LED_Y, LED_Z)
+# plot3D.plotJustLEDPos(LED_X, LED_Z, LED_Y)
 # plot3D.showPlot()
+# exit()
 
 
 
@@ -45,10 +56,20 @@ outPts = []
 def testRun(dataDict):
     # Drop small points
     S = np.array(dataDict['size'])
-    ptSet = np.where(S > 20)
+    
+    # ptSet = np.where(S >= st.median(S))
+    ptSet = np.where(S >= 0)
     xAngle = np.array(dataDict['xPix'])[ptSet]
     yAngle = np.array(dataDict['yPix'])[ptSet]
-    ptSize = np.array(S[ptSet], dtype=np.double)
+    ptSize = np.array(S[ptSet], dtype=np.double)/max(S)
+
+
+
+    # ptSet = np.where(S >= 0)
+    # xAngle = np.array(dataDict['xPix'])
+    # yAngle = np.array(dataDict['yPix']) -0.8645972344
+    # ptSize = np.power(np.array(S, dtype=np.double)/max(S), np.full(S.shape, 2))
+
 
 
     # # Override plot color to indicate LED index
@@ -58,42 +79,57 @@ def testRun(dataDict):
 
 
     # Setup data arrays from camera data
-    camVect_Z = np.ones_like(xAngle)
     camVect_X = np.tan(xAngle)
     camVect_Y = np.tan(yAngle)
+    camVect_Z = np.ones_like(xAngle)
     inVects = [camVect_X, camVect_Y, camVect_Z]
     basePts = [np.array(dataDict['LED_X'])[ptSet], np.array(dataDict['LED_Y'])[ptSet], np.array(dataDict['LED_Z'])[ptSet]]
     
+
+    
+    # print(yAngle)
+    # print(yAngle-0.8645972344)
+    # print(np.tan(yAngle))
+    # print(np.tan(yAngle-0.8645972344))
+    # exit()
+
+
     # Actually call localization
-    import random
-    # print(f"{camVect_X[0]} -> ", end='')
-    camVect_X[0] += random.random()/1000
-    # print(camVect_X[0])
     motion_best = localization.fitPositionToVectors(camVect_X, camVect_Y, camVect_Z, ptSize, range(len(camVect_Z)))
     bestPts = completeMotion(basePts, motion_best)
     outPts.append(bestPts)
+
+    
+    
     
     fooError = localization.getError()
 
-    # if fooError < 1000:
-    #     plot3D.plotAlpha = 0.5
-    #     plot3D.setColor('orange')
-    #     plot3D.plotLedPositions(bestPts)
-    #     plot3D.setColor('red')
-    #     plot3D.plotErrorLines(inVects, bestPts)
-    #     plot3D.setColor('black')
-    #     plot3D.plotCameraVectorSections(camVect_X, camVect_Y, camVect_Z, bestPts)
-    #     plot3D.setColor('blue')
-    #     plot3D.plotCameraImageRange(camVect_X, camVect_Y, camVect_Z, bestPts)
+    if True:
+    # if fooError < 10000:
+    # if doPlot3d: 
+        showPts = [np.array(dataDict['LED_X']), np.array(dataDict['LED_Y']), np.array(dataDict['LED_Z'])]
+        showPts = completeMotion(showPts, motion_best)
+        plot3D.plotAlpha = 0.5
+        plot3D.setColor('orange')
+        plot3D.plotLedPositions(showPts)
+        plot3D.setColor('red')
+        plot3D.plotErrorLines(inVects, bestPts)
+        plot3D.setColor('black')
+        plot3D.plotCameraVectorSections(camVect_X, camVect_Y, camVect_Z, bestPts)
+        # plot3D.setColor('blue')
+        # plot3D.plotCameraImageRange(camVect_X, camVect_Y, camVect_Z, bestPts)
     
 
     if fooError > 1000: print("!!! ", end='')
     else: print("    ", end='')
 
-    print(f"Error:{str(round(fooError, 3)).rjust(15, ' ')}   randFactor:{str(round(localization.getRandFactor(), 3)).rjust(15, ' ')}", end='')
+    print(f"Error:{str(round(fooError, 3)).rjust(10, ' ')}   randFactor:{str(round(localization.getRandFactor(), 3)).rjust(10, ' ')}", end='')
     for foo in motion_best: print(f"{str(round(foo,5)).rjust(15, ' ')}", end='')
     print('')
 
+
+for fooRun in dataRuns:
+    testRun(fooRun)
 
 for fooRun in dataRuns:
     testRun(fooRun)
@@ -129,8 +165,11 @@ knownPts = completeMotion(knownPts, [0, 0, centerDist, 0, 0, 0])
 #     plt.scatter(fooRun['xPix'], fooRun['yPix'], color='blue')
 # plt.show()
 
-for foo in outPts:
-    print(foo)
 
 
-# plot3D.showPlot()
+# for foo in outPts:
+#     print(foo)
+
+
+
+if doPlot3d: plot3D.showPlot()

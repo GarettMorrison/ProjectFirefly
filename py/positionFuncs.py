@@ -64,6 +64,9 @@ def undoMotion(inPts, motion):
     
     return(ptSet)
 
+def magnitude(inVals):
+    return(m.sqrt(sum(pow(inVals,2))))
+
 def getClosestPts(inVectors, inPts):
     inPts = np.column_stack(inPts)
     inVectors = np.column_stack(inVectors)

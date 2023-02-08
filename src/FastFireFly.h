@@ -17,7 +17,6 @@ private:
     vector<double> LED_Set_X;
     vector<double> LED_Set_Y;
     vector<double> LED_Set_Z;
-
     // Current best set of position (mm) and rotation (rad) values
     vector<double> currentPosition = {0,0,0,0,0,0}; 
     double currentError;
@@ -34,24 +33,31 @@ private:
     vector<double> InputVect_X;
     vector<double> InputVect_Y;
     vector<double> InputVect_Z;
+    vector<double> InputVect_S;
     vector<double> InputVect_LED_ID;
 
     // Factors by which to randomize position for testing
-    double default_randomizeFactor = 500;
-    double randomizeFactor = 500;
+    double default_randomizeFactor = 10;
+    double randomizeFactor = 100;
+    double mininumValueZ = 100.0;
+    size_t randomizeCount = 100000;
 
     double acceptableRandomizerVal = 0.01;
+    double acceptableError = 10;
 
     void randomizeTestPosition(); // Randomly modify test position according to randomizeFactor
     void calculateLedTestPositions(); // Calculate LED_Testpos_X arrays from testPosition and LED_Set_XYZ
     double calculateError(); // Calculate error of current test position
-
+    void randomizeRotation(); // Just randomize rotation
 
 
 public:
     ledLocalizationFast(vector<double> _LED_X, vector<double> _LED_Y, vector<double> _LED_Z, double _pos_x=1000, double _pos_y=0, double _pos_z=0);
     vector<double> getPosition(void){ return(currentPosition); }
-    vector<double> fitPositionToVectors(vector<double> vect_X, vector<double> vect_Y, vector<double> vect_Z, vector<double> _LED_Indices);
+    vector<double> fitPositionToVectors(vector<double> vect_X, vector<double> vect_Y, vector<double> vect_Z, vector<double> _Vect_S, vector<double> _LED_Indices);
+    // vector<double> regressionFitLessRandom(vector<double> vect_X, vector<double> vect_Y, vector<double> vect_Z, vector<double> _LED_Indices);
+    double getError(){return(currentError);}
+    double getRandFactor(){return(randomizeFactor);}    
 };
 
 #endif

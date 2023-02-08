@@ -7663,12 +7663,13 @@ SWIGINTERN PyObject *_wrap_ledLocalizationFast_fitPositionToVectors(PyObject *SW
   std::vector< double > arg3 ;
   std::vector< double > arg4 ;
   std::vector< double > arg5 ;
+  std::vector< double > arg6 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
-  PyObject *swig_obj[5] ;
+  PyObject *swig_obj[6] ;
   std::vector< double > result;
   
-  if (!SWIG_Python_UnpackTuple(args, "ledLocalizationFast_fitPositionToVectors", 5, 5, swig_obj)) SWIG_fail;
+  if (!SWIG_Python_UnpackTuple(args, "ledLocalizationFast_fitPositionToVectors", 6, 6, swig_obj)) SWIG_fail;
   res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_ledLocalizationFast, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ledLocalizationFast_fitPositionToVectors" "', argument " "1"" of type '" "ledLocalizationFast *""'"); 
@@ -7710,8 +7711,63 @@ SWIGINTERN PyObject *_wrap_ledLocalizationFast_fitPositionToVectors(PyObject *SW
     arg5 = *ptr;
     if (SWIG_IsNewObj(res)) delete ptr;
   }
-  result = (arg1)->fitPositionToVectors(arg2,arg3,arg4,arg5);
+  {
+    std::vector< double,std::allocator< double > > *ptr = (std::vector< double,std::allocator< double > > *)0;
+    int res = swig::asptr(swig_obj[5], &ptr);
+    if (!SWIG_IsOK(res) || !ptr) {
+      SWIG_exception_fail(SWIG_ArgError((ptr ? res : SWIG_TypeError)), "in method '" "ledLocalizationFast_fitPositionToVectors" "', argument " "6"" of type '" "std::vector< double >""'"); 
+    }
+    arg6 = *ptr;
+    if (SWIG_IsNewObj(res)) delete ptr;
+  }
+  result = (arg1)->fitPositionToVectors(arg2,arg3,arg4,arg5,arg6);
   resultobj = swig::from(static_cast< std::vector< double,std::allocator< double > > >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_ledLocalizationFast_getError(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  ledLocalizationFast *arg1 = (ledLocalizationFast *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  double result;
+  
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_ledLocalizationFast, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ledLocalizationFast_getError" "', argument " "1"" of type '" "ledLocalizationFast *""'"); 
+  }
+  arg1 = reinterpret_cast< ledLocalizationFast * >(argp1);
+  result = (double)(arg1)->getError();
+  resultobj = SWIG_From_double(static_cast< double >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_ledLocalizationFast_getRandFactor(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  ledLocalizationFast *arg1 = (ledLocalizationFast *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject *swig_obj[1] ;
+  double result;
+  
+  if (!args) SWIG_fail;
+  swig_obj[0] = args;
+  res1 = SWIG_ConvertPtr(swig_obj[0], &argp1,SWIGTYPE_p_ledLocalizationFast, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ledLocalizationFast_getRandFactor" "', argument " "1"" of type '" "ledLocalizationFast *""'"); 
+  }
+  arg1 = reinterpret_cast< ledLocalizationFast * >(argp1);
+  result = (double)(arg1)->getRandFactor();
+  resultobj = SWIG_From_double(static_cast< double >(result));
   return resultobj;
 fail:
   return NULL;
@@ -7809,6 +7865,8 @@ static PyMethodDef SwigMethods[] = {
 	 { "new_ledLocalizationFast", _wrap_new_ledLocalizationFast, METH_VARARGS, NULL},
 	 { "ledLocalizationFast_getPosition", _wrap_ledLocalizationFast_getPosition, METH_O, NULL},
 	 { "ledLocalizationFast_fitPositionToVectors", _wrap_ledLocalizationFast_fitPositionToVectors, METH_VARARGS, NULL},
+	 { "ledLocalizationFast_getError", _wrap_ledLocalizationFast_getError, METH_O, NULL},
+	 { "ledLocalizationFast_getRandFactor", _wrap_ledLocalizationFast_getRandFactor, METH_O, NULL},
 	 { "delete_ledLocalizationFast", _wrap_delete_ledLocalizationFast, METH_O, NULL},
 	 { "ledLocalizationFast_swigregister", ledLocalizationFast_swigregister, METH_O, NULL},
 	 { "ledLocalizationFast_swiginit", ledLocalizationFast_swiginit, METH_VARARGS, NULL},

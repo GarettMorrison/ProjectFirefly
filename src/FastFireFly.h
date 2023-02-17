@@ -1,7 +1,6 @@
 #ifndef FASTFIREFLY_H
 #define FASTFIREFLY_H
 
-
 #include <stdio.h>
 #include <stdlib.h>     /* srand, rand */
 #include <time.h>       /* time */
@@ -10,6 +9,8 @@
 
 using namespace std;
 
+
+
 // Initialize localization system with LED array, save to avoid reloading constant information constantly
 class ledLocalizationFast{
 private:
@@ -17,6 +18,7 @@ private:
     vector<double> LED_Set_X;
     vector<double> LED_Set_Y;
     vector<double> LED_Set_Z;
+
     // Current best set of position (mm) and rotation (rad) values
     vector<double> currentPosition = {0,0,0,0,0,0}; 
     double currentError;
@@ -29,6 +31,7 @@ private:
     vector<double> LED_TestPos_X;
     vector<double> LED_TestPos_Y;
     vector<double> LED_TestPos_Z;
+
     // LED position vectors for input
     vector<double> InputVect_X;
     vector<double> InputVect_Y;
@@ -38,7 +41,7 @@ private:
 
     // Factors by which to randomize position for testing
     double default_randomizeFactor = 10;
-    double randomizeFactor = 100;
+    double randomizeFactor = 10;
     double mininumValueZ = 300.0;
     size_t randomizeCount = 100000;
 
@@ -52,7 +55,7 @@ private:
 
 
 public:
-    ledLocalizationFast(vector<double> _LED_X, vector<double> _LED_Y, vector<double> _LED_Z, double _pos_x=1000, double _pos_y=0, double _pos_z=0);
+    ledLocalizationFast(vector<double> _LED_X, vector<double> _LED_Y, vector<double> _LED_Z, double _pos_x=0, double _pos_y=-500, double _pos_z=1000);
     vector<double> getPosition(void){ return(currentPosition); }
     vector<double> fitPositionToVectors(vector<double> vect_X, vector<double> vect_Y, vector<double> vect_Z, vector<double> _Vect_S, vector<double> _LED_Indices);
     // vector<double> regressionFitLessRandom(vector<double> vect_X, vector<double> vect_Y, vector<double> vect_Z, vector<double> _LED_Indices);

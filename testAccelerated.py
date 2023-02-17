@@ -17,6 +17,8 @@ if DO_PLOT_3D: import py.plot3D as plot3D
 existingFiles = os.listdir('data/')
 print(existingFiles)
 
+
+
 # Load data files
 dataRuns = []
 for fileName in existingFiles:

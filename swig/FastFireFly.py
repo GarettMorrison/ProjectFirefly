@@ -232,7 +232,7 @@ class ledLocalizationFast(object):
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
 
-    def __init__(self, _LED_X, _LED_Y, _LED_Z, _pos_x=1000, _pos_y=0, _pos_z=0):
+    def __init__(self, _LED_X, _LED_Y, _LED_Z, _pos_x=0, _pos_y=-500, _pos_z=1000):
         _FastFireFly.ledLocalizationFast_swiginit(self, _FastFireFly.new_ledLocalizationFast(_LED_X, _LED_Y, _LED_Z, _pos_x, _pos_y, _pos_z))
 
     def getPosition(self):

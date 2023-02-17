@@ -18,7 +18,12 @@ void ledLocalizationFast::randomizeTestPosition(){
     for(size_t ii=0; ii<randCount; ii++){
         int randIndex = rand()%6;
         if(randIndex < 3) testPosition[randIndex] += randomizeFactor * (2*(double)rand()/RAND_MAX -1); // Randomize position value
-        else testPosition[randIndex] += PI_VALUE*(randomizeFactor/default_randomizeFactor) * (2*(double)rand()/RAND_MAX -1); // Randomize rotation value
+        else{   // Randomize rotation value
+            testPosition[randIndex] += PI_VALUE*(randomizeFactor/default_randomizeFactor) * (2*(double)rand()/RAND_MAX -1);
+            // limit rotations to +- PI
+            while(testPosition[randIndex] > PI_VALUE) testPosition[randIndex] -= 2*PI_VALUE;
+            while(testPosition[randIndex] < -PI_VALUE) testPosition[randIndex] += 2*PI_VALUE;
+        }
     }
 
     // Make sure position is in front of camera
@@ -42,24 +47,46 @@ void ledLocalizationFast::randomizeRotation(){
 
 // Calculate LED_Testpos_XYZ arrays from testPosition and LED_Set_XYZ
 void ledLocalizationFast::calculateLedTestPositions(){
-    // Load rotations as short names to max rotationMatrix at least a little legible
+    // Load rotations as short names to make rotationMatrix at least a little legible
     double A = testPosition[3];
     double B = testPosition[4];
     double C = testPosition[5];
 
     // Calculate rotation matrix factors
-    vector<double> rotationMatrixA{cos(C)*cos(B), -sin(C)*cos(A) + cos(C)*sin(A)*sin(B), sin(C)*sin(A)+cos(C)*sin(B)*cos(A)};
-    vector<double> rotationMatrixB{sin(C)*cos(B), cos(C)*cos(A) + sin(C)*sin(B)*sin(A), -cos(C)*sin(A)+sin(C)*sin(B)*cos(A)};
-    vector<double> rotationMatrixC{-sin(B), cos(B)*sin(A), cos(B)*cos(A)};
+    vector<double> rotationMatrixA{ cos(B)*cos(C), sin(A)*sin(B)*cos(C)-cos(A)*sin(C), cos(A)*sin(B)*cos(C)+sin(A)*sin(C) };
+    vector<double> rotationMatrixB{ cos(B)*sin(C), sin(A)*sin(B)*sin(C) +cos(A)*cos(C), cos(A)*sin(B)*sin(C) -sin(A)*cos(C) };
+    vector<double> rotationMatrixC{ -sin(B), sin(A)*cos(B), cos(A)*cos(B) };
 
     // Iterate through LED_TestPos, calculating each rotation and translation
     for(size_t ii=0; ii<LED_TestPos_X.size(); ii++){
-        LED_TestPos_X[ii] = testPosition[0] + LED_Set_X[ii]*rotationMatrixA[0] + LED_Set_Y[ii]*rotationMatrixB[0] + LED_Set_Z[ii]*rotationMatrixC[0];
-        LED_TestPos_Y[ii] = testPosition[1] + LED_Set_X[ii]*rotationMatrixA[1] + LED_Set_Y[ii]*rotationMatrixB[1] + LED_Set_Z[ii]*rotationMatrixC[1];
-        LED_TestPos_Z[ii] = testPosition[2] + LED_Set_X[ii]*rotationMatrixA[2] + LED_Set_Y[ii]*rotationMatrixB[2] + LED_Set_Z[ii]*rotationMatrixC[2];
+        LED_TestPos_X[ii] = testPosition[0] + LED_Set_X[ii]*rotationMatrixA[0] + LED_Set_Y[ii]*rotationMatrixA[1] + LED_Set_Z[ii]*rotationMatrixA[2];
+        LED_TestPos_Y[ii] = testPosition[1] + LED_Set_X[ii]*rotationMatrixB[0] + LED_Set_Y[ii]*rotationMatrixB[1] + LED_Set_Z[ii]*rotationMatrixB[2];
+        LED_TestPos_Z[ii] = testPosition[2] + LED_Set_X[ii]*rotationMatrixC[0] + LED_Set_Y[ii]*rotationMatrixC[1] + LED_Set_Z[ii]*rotationMatrixC[2];
     }
 }
 
+
+
+// // MAYBE BROKEN ATTEMPTING FIX
+// // Calculate LED_Testpos_XYZ arrays from testPosition and LED_Set_XYZ
+// void ledLocalizationFast::calculateLedTestPositions(){
+//     // Load rotations as short names to make rotationMatrix at least a little legible
+//     double A = testPosition[3];
+//     double B = testPosition[4];
+//     double C = testPosition[5];
+
+//     // Calculate rotation matrix factors
+//     vector<double> rotationMatrixA{cos(C)*cos(B), -sin(C)*cos(A) + cos(C)*sin(A)*sin(B), sin(C)*sin(A)+cos(C)*sin(B)*cos(A)};
+//     vector<double> rotationMatrixB{sin(C)*cos(B), cos(C)*cos(A) + sin(C)*sin(B)*sin(A), -cos(C)*sin(A)+sin(C)*sin(B)*cos(A)};
+//     vector<double> rotationMatrixC{-sin(B), cos(B)*sin(A), cos(B)*cos(A)};
+
+//     // Iterate through LED_TestPos, calculating each rotation and translation
+//     for(size_t ii=0; ii<LED_TestPos_X.size(); ii++){
+//         LED_TestPos_X[ii] = testPosition[0] + LED_Set_X[ii]*rotationMatrixA[0] + LED_Set_Y[ii]*rotationMatrixB[0] + LED_Set_Z[ii]*rotationMatrixC[0];
+//         LED_TestPos_Y[ii] = testPosition[1] + LED_Set_X[ii]*rotationMatrixA[1] + LED_Set_Y[ii]*rotationMatrixB[1] + LED_Set_Z[ii]*rotationMatrixC[1];
+//         LED_TestPos_Z[ii] = testPosition[2] + LED_Set_X[ii]*rotationMatrixA[2] + LED_Set_Y[ii]*rotationMatrixB[2] + LED_Set_Z[ii]*rotationMatrixC[2];
+//     }
+// }
 
 
 double linePtDistanceSquared(double xVect, double yVect, double zVect, double xPos, double yPos, double zPos){

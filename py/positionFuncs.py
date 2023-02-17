@@ -20,25 +20,48 @@ def doRotationMatrixes(inPts, rotations, transposed = False):
     B = rotations[1]
     C = rotations[2]
 
-    rotationMags = np.array([
-        [cos(C)*cos(B), -sin(C)*cos(A) + cos(C)*sin(A)*sin(B), sin(C)*sin(A)+cos(C)*sin(B)*cos(A)],
-        [sin(C)*cos(B), cos(C)*cos(A) + sin(C)*sin(B)*sin(A), -cos(C)*sin(A)+sin(C)*sin(B)*cos(A)],
-        [-sin(B), cos(B)*sin(A), cos(B)*cos(A)],
+    rotationMags = np.array([        
+        [ cos(B)*cos(C), sin(A)*sin(B)*cos(C)-cos(A)*sin(C), cos(A)*sin(B)*cos(C)+sin(A)*sin(C) ],
+        [ cos(B)*sin(C), sin(A)*sin(B)*sin(C) +cos(A)*cos(C), cos(A)*sin(B)*sin(C) -sin(A)*cos(C) ],
+        [ -sin(B), sin(A)*cos(B), cos(A)*cos(B) ],
     ])
     
     if transposed: rotationMags = np.matrix.transpose(rotationMags)
 
-
-    # for foo in inPts[1]:
-    #     print(f"{foo} : {foo*rotationMags[0][0]}")
-
-    xPts = sum([inPts[ii]*rotationMags[ii][0] for ii in range(3)])
-    yPts = sum([inPts[ii]*rotationMags[ii][1] for ii in range(3)])
-    zPts = sum([inPts[ii]*rotationMags[ii][2] for ii in range(3)])
+    xPts = sum([inPts[ii]*rotationMags[0][ii] for ii in range(3)])
+    yPts = sum([inPts[ii]*rotationMags[1][ii] for ii in range(3)])
+    zPts = sum([inPts[ii]*rotationMags[2][ii] for ii in range(3)])
 
     # for foo in rotationMags: print(foo)
 
     return([xPts, yPts, zPts])
+
+# PROBABLY BROKEN MAYBE
+# def doRotationMatrixes(inPts, rotations, transposed = False):
+#     A = rotations[0]
+    # B = rotations[1]
+    # C = rotations[2]
+
+    # rotationMags = np.array([
+    #     [cos(C)*cos(B), -sin(C)*cos(A) + cos(C)*sin(A)*sin(B), sin(C)*sin(A)+cos(C)*sin(B)*cos(A)],
+    #     [sin(C)*cos(B), cos(C)*cos(A) + sin(C)*sin(B)*sin(A), -cos(C)*sin(A)+sin(C)*sin(B)*cos(A)],
+    #     [-sin(B), cos(B)*sin(A), cos(B)*cos(A)],
+    # ])
+    
+    # if transposed: rotationMags = np.matrix.transpose(rotationMags)
+
+
+    # # for foo in inPts[1]:
+    # #     print(f"{foo} : {foo*rotationMags[0][0]}")
+
+    # xPts = sum([inPts[ii]*rotationMags[ii][0] for ii in range(3)])
+    # yPts = sum([inPts[ii]*rotationMags[ii][1] for ii in range(3)])
+    # zPts = sum([inPts[ii]*rotationMags[ii][2] for ii in range(3)])
+
+    # # for foo in rotationMags: print(foo)
+
+    # return([xPts, yPts, zPts])
+
 
 
 def completeMotion(inPts, motion):

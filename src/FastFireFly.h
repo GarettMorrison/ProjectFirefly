@@ -39,7 +39,7 @@ private:
     // Factors by which to randomize position for testing
     double default_randomizeFactor = 10;
     double randomizeFactor = 100;
-    double mininumValueZ = 100.0;
+    double mininumValueZ = 300.0;
     size_t randomizeCount = 100000;
 
     double acceptableRandomizerVal = 0.01;

@@ -238,8 +238,14 @@ class ledLocalizationFast(object):
     def getPosition(self):
         return _FastFireFly.ledLocalizationFast_getPosition(self)
 
-    def fitPositionToVectors(self, vect_X, vect_Y, vect_Z, _LED_Indices):
-        return _FastFireFly.ledLocalizationFast_fitPositionToVectors(self, vect_X, vect_Y, vect_Z, _LED_Indices)
+    def fitPositionToVectors(self, vect_X, vect_Y, vect_Z, _Vect_S, _LED_Indices):
+        return _FastFireFly.ledLocalizationFast_fitPositionToVectors(self, vect_X, vect_Y, vect_Z, _Vect_S, _LED_Indices)
+
+    def getError(self):
+        return _FastFireFly.ledLocalizationFast_getError(self)
+
+    def getRandFactor(self):
+        return _FastFireFly.ledLocalizationFast_getRandFactor(self)
     __swig_destroy__ = _FastFireFly.delete_ledLocalizationFast
 
 # Register ledLocalizationFast in _FastFireFly:

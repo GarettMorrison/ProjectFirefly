@@ -7,8 +7,9 @@ from py.positionFuncs import *
 
 import swig.FastFireFly as FFF
 
-doPlot3d = True
-if doPlot3d: import py.plot3D as plot3D
+DO_PLOT_3D = True
+# DO_PLOT_3D = False
+if DO_PLOT_3D: import py.plot3D as plot3D
 
 
 
@@ -26,9 +27,6 @@ for fileName in existingFiles:
     inFile.close()
     dataRuns.append(readDict)
 
-
-    for foo in readDict:
-        print(f"{foo}:{len(readDict[foo])}")
 
 # LED Positions by index
 LED_X = np.array( [ 112.5833025, 91.92388155, 65, 32.5, 45.96194078, 56.29165125, -56.29165125, -45.96194078, -32.5, -65, -91.92388155, -112.5833025, -56.29165125, -45.96194078, -32.5, 32.5, 45.96194078, 56.29165125, ] )
@@ -57,18 +55,20 @@ def testRun(dataDict):
     # Drop small points
     S = np.array(dataDict['size'])
     
-    # ptSet = np.where(S >= st.median(S))
-    ptSet = np.where(S >= 0)
-    xAngle = np.array(dataDict['xPix'])[ptSet]
-    yAngle = np.array(dataDict['yPix'])[ptSet]
-    ptSize = np.array(S[ptSet], dtype=np.double)/max(S)
-
-
-
+    # # ptSet = np.where(S >= st.median(S))
     # ptSet = np.where(S >= 0)
-    # xAngle = np.array(dataDict['xPix'])
+    # xAngle = np.array(dataDict['xPix'])[ptSet]
+    # yAngle = np.array(dataDict['yPix'])[ptSet]
+    # ptSize = np.array(S[ptSet], dtype=np.double)/max(S)
+
+
+
+    ptSet = np.where(S >= 0)
+    xAngle = np.array(dataDict['xAng'])
+    # yAngle = np.array(dataDict['yPix'])
     # yAngle = np.array(dataDict['yPix']) -0.8645972344
-    # ptSize = np.power(np.array(S, dtype=np.double)/max(S), np.full(S.shape, 2))
+    yAngle = np.array(dataDict['yAng']) -m.radians(30)
+    ptSize = np.power(np.array(S, dtype=np.double)/max(S), np.full(S.shape, 3))
 
 
 
@@ -99,7 +99,9 @@ def testRun(dataDict):
     bestPts = completeMotion(basePts, motion_best)
     outPts.append(bestPts)
 
-    
+    # for ii in range(3, 6): motion_best[ii] = motion_best[ii] % np.pi*2
+
+    # motion_best = (motion_best[0], motion_best[1], motion_best[2], motion_best[3]%2*np.pi, motion_best[4]%2*np.pi, motion_best[5]%2*np.pi)
     
     
     fooError = localization.getError()
@@ -109,27 +111,34 @@ def testRun(dataDict):
     # if doPlot3d: 
         showPts = [np.array(dataDict['LED_X']), np.array(dataDict['LED_Y']), np.array(dataDict['LED_Z'])]
         showPts = completeMotion(showPts, motion_best)
-        plot3D.plotAlpha = 0.5
-        plot3D.setColor('orange')
-        plot3D.plotLedPositions(showPts)
-        plot3D.setColor('red')
-        plot3D.plotErrorLines(inVects, bestPts)
-        plot3D.setColor('black')
-        plot3D.plotCameraVectorSections(camVect_X, camVect_Y, camVect_Z, bestPts)
+
+        if DO_PLOT_3D:
+            plot3D.plotAlpha = 0.5
+            plot3D.setColor('orange')
+            plot3D.plotLedPositions(showPts)
+            plot3D.setColor('red')
+            plot3D.plotErrorLines(inVects, bestPts)
+
+            plot3D.setColor('black')
+            plot3D.plotCameraVectorSections(camVect_X, camVect_Y, camVect_Z, bestPts)
+
         # plot3D.setColor('blue')
         # plot3D.plotCameraImageRange(camVect_X, camVect_Y, camVect_Z, bestPts)
     
 
-    if fooError > 1000: print("!!! ", end='')
-    else: print("    ", end='')
+    # if fooError > 1000: print("!!! ", end='')
+    # else: print("    ", end='')
 
     print(f"Error:{str(round(fooError, 3)).rjust(10, ' ')}   randFactor:{str(round(localization.getRandFactor(), 3)).rjust(10, ' ')}", end='')
     for foo in motion_best: print(f"{str(round(foo,5)).rjust(15, ' ')}", end='')
     print('')
 
 
-for fooRun in dataRuns:
-    testRun(fooRun)
+
+# print(f"Error:{''.rjust(10, ' ')}   randFactor:{('').rjust(10, ' ')}", end='')
+print(f"      {''.rjust(10, ' ')}              {('').rjust(10, ' ')}", end='')
+for foo in ['X Position', 'Y Position', 'Z Position', 'X Rotation', 'Y Rotation', 'Z Rotation', ]: print(f"{(foo).rjust(15, ' ')}", end='')
+print('')
 
 for fooRun in dataRuns:
     testRun(fooRun)
@@ -160,10 +169,11 @@ knownPts = completeMotion(knownPts, [0, 0, centerDist, 0, 0, 0])
 # plot3D.ax.scatter(knownPts[0], knownPts[2], knownPts[1], color='green')
 
 
-# plt.cla()
-# for fooRun in dataRuns:
-#     plt.scatter(fooRun['xPix'], fooRun['yPix'], color='blue')
-# plt.show()
+if not DO_PLOT_3D:
+    plt.cla()
+    for fooRun in dataRuns:
+        plt.scatter(fooRun['xAng'], fooRun['yAng'], color='blue')
+    plt.show()
 
 
 
@@ -172,4 +182,4 @@ knownPts = completeMotion(knownPts, [0, 0, centerDist, 0, 0, 0])
 
 
 
-if doPlot3d: plot3D.showPlot()
+if DO_PLOT_3D: plot3D.showPlot()

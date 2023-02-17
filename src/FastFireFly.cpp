@@ -74,11 +74,9 @@ double ledLocalizationFast::calculateError(){
 
     for(size_t ii=0; ii<InputVect_LED_ID.size(); ii++){
         int LED_Index = InputVect_LED_ID[ii];
-
-        testError += linePtDistanceSquared( InputVect_X[ii], InputVect_Y[ii], InputVect_Z[ii], LED_TestPos_X[LED_Index], LED_TestPos_Y[LED_Index], LED_TestPos_Z[LED_Index] );
+        testError += linePtDistanceSquared( InputVect_X[ii], InputVect_Y[ii], InputVect_Z[ii], LED_TestPos_X[LED_Index], LED_TestPos_Y[LED_Index], LED_TestPos_Z[LED_Index] ) * InputVect_S[ii];
     }
-    ////////// TODO implement InputVect_LED_ID
-
+    
     return(testError);
 }
 
@@ -129,7 +127,7 @@ vector<double> ledLocalizationFast::fitPositionToVectors(vector<double> _Vect_X,
             currentError = testError; // Save best error
             currentPosition = testPosition; // Save best position
 
-            // printf("%10.6f   %6.6f\n", testError, randomizeFactor); // Print error and randomize factor
+            // printf("%10.6f   %6.6f   ", testError, randomizeFactor); // Print error and randomize factor
 
             // for(double ii : currentPosition) printf("%5.4f   ", ii);
             // printf("\n");

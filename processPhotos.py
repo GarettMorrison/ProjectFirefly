@@ -13,61 +13,46 @@ import imageio
 from py.serialCommunication import listPorts, roverSerial
 from py.webcam import webcam, adjacentImages
 
-
-LED_BRIGHTNESS = 60
-
-
+# Constant values for LEDs
+LED_COUNT = 18
 LED_X = np.array( [ 112.5833025, 91.92388155, 65, 32.5, 45.96194078, 56.29165125, -56.29165125, -45.96194078, -32.5, -65, -91.92388155, -112.5833025, -56.29165125, -45.96194078, -32.5, 32.5, 45.96194078, 56.29165125, ] )
 LED_Y = np.array( [ 65, 91.92388155, 112.5833025, 112.5833025, 91.92388155, 65, 65, 91.92388155, 112.5833025, 112.5833025, 91.92388155, 65, 65, 91.92388155, 112.5833025, 112.5833025, 91.92388155, 65, ] )
 LED_Z = np.array( [ 0, 0, 0, -56.29165125, -79.60841664, -97.5, -97.5, -79.60841664, -56.29165125, 0, 0, 0, 97.5, 79.60841664, 56.29165125, 56.29165125, 79.60841664, 97.5, ] )
+LED_EXCLUSION = [
+    [0,1,2], 
+    [3,4,5], 
+    [6, 7, 8],
+    [9, 10, 11],
+    [12, 13, 14],
+    [15, 16, 17],
+]
+LED_ARRAY = [LED_X, LED_Y, LED_Z]
 
 
 listPorts()
 roverComms = roverSerial()
 
-webcamComms = webcam()
-img = webcamComms.readImage()
-cv2.imshow('Display', adjacentImages([img, np.zeros_like(img), np.zeros_like(img)]))
+webcamComms = webcam(LED_ARRAY, roverComms, LED_EXCLUSION)
+webcamComms.updateDisplay()
 
 while True:
     k = cv2.waitKey(33)
     if k==27:    # Esc key to stop
         exit()
-    elif k==-1:  # normally -1 returned,so don't print it
-        img = webcamComms.readImage()
-        cv2.imshow('Display', adjacentImages([[img, np.zeros_like(img),], [np.zeros_like(img), np.zeros_like(img)]]))
+    elif k==-1:  # Normally -1 returned,so don't print it
+        webcamComms.readImage()
+        webcamComms.updateDisplay()
 
-    elif k != 32:
-        print(k) # else print its value
+    elif k != 32: # If char is not space bar
+        print(k)
 
-    else:
-        for ii in range(18):
-            roverComms.setLED(ii, [LED_BRIGHTNESS, LED_BRIGHTNESS, LED_BRIGHTNESS] )
-            time.sleep(0.2)
-            img, subtract = webcamComms.readAndProcImage(ii)
-            roverComms.setLED(ii, [0, 0, 0] )
-            
-        # for foo in webcamComms.getData():
-        #     print(foo)
+    else: # Char is space bar, take data pt
+        webcamComms.clearData()
+        outDict = webcamComms.readVectors()
 
 
-        camData = webcamComms.getData()
-
-        led_indices = np.array(camData[3])
-
-        outDict = {
-            'xPix': camData[0],
-            'yPix': camData[1],
-            'size': camData[2],
-            'index': camData[3],
-            'LED_X': LED_X[led_indices],
-            'LED_Y': LED_Y[led_indices],
-            'LED_Z': LED_Z[led_indices],
-        }
-
-
+        # Find filename to pickle data too
         existingFiles = os.listdir('data/')
-
         fileInd = 0
         while True:
             fileName = f"run_{fileInd}.pkl"
@@ -76,26 +61,21 @@ while True:
             else:
                 break
 
-
+        # Pickle dictionary
         outFile = open("data/"+fileName, 'wb')
         pkl.dump(outDict, outFile)
         outFile.close()
 
+        print(f"\nFound {len(outDict['index'])}/{len(LED_X)} positions")
+        print(f"Located: {np.sort(outDict['index'])}\n")
 
-        # webcamComms.saveGif("data/"+fileName.split('.',)[0]+".gif")
+        notFound = np.setdiff1d( np.arange(LED_COUNT), outDict['index'] )
+        print(f"Not found: {np.sort(notFound)}\n")
 
+        failures = webcamComms.getFails()
 
-        ptCount = len(camData[0])
-        plotColor = []
-        for ii in range(ptCount):
-            colVal = 1.0*ii/ptCount
-            plotColor.append([1.0-colVal, 0.0, 0.0])
+        for ii in np.sort(notFound):
+            print(f"{ii}:")
 
-
-        plt.scatter(camData[0], camData[1], color=plotColor)
-        plt.ion()
-        plt.pause(1)
-
-        # webcamComms.displayThresh()
-
-        webcamComms.clearData()
+            for attempt in failures[ii]:
+                print(f"     {attempt[0].ljust(20, ' ')}  {str(attempt[1]).ljust(5, ' ')}  {str(attempt[2]).ljust(5, ' ')}  {str(attempt[3]).ljust(5, ' ')}")

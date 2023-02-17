@@ -24,7 +24,7 @@ class roverSerial:
         # ser = serial.Serial('COM6', baudrate=9600, timeout=0, parity=serial.PARITY_EVEN, stopbits=1)
 
         self.ser = serial.Serial('COM3', baudrate=4800, timeout=2)
-        time.sleep(2)
+        time.sleep(1)
 
     ledSetAttempts = []
     def setLED(self, pos, vals):

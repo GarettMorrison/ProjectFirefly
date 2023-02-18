@@ -11,6 +11,7 @@ DO_PLOT_3D = True
 # DO_PLOT_3D = False
 if DO_PLOT_3D: import py.plot3D as plot3D
 
+DO_FILEOUT = False
 
 
 # Find data files to load
@@ -35,7 +36,6 @@ LED_X = np.array( [ 112.5833025, 91.92388155, 65, 32.5, 45.96194078, 56.29165125
 LED_Y = np.array( [ 65, 91.92388155, 112.5833025, 112.5833025, 91.92388155, 65, 65, 91.92388155, 112.5833025, 112.5833025, 91.92388155, 65, 65, 91.92388155, 112.5833025, 112.5833025, 91.92388155, 65, ] )
 LED_Z = np.array( [ 0, 0, 0, -56.29165125, -79.60841664, -97.5, -97.5, -79.60841664, -56.29165125, 0, 0, 0, 97.5, 79.60841664, 56.29165125, 56.29165125, 79.60841664, 97.5, ] )
 
-
 # # Set plot color to position range 
 # plotColor = []
 # for ii in range(len(LED_X)): plotColor.append([1.0-1.0*ii/len(LED_X), 0.0, 0.0])
@@ -52,6 +52,10 @@ LED_Z = np.array( [ 0, 0, 0, -56.29165125, -79.60841664, -97.5, -97.5, -79.60841
 
 localization = FFF.ledLocalizationFast(LED_X, LED_Y, LED_Z)
 outPts = []
+
+if DO_FILEOUT:
+    writePoints = open('data/PositionLog.csv', 'w')
+    writeIndex = 0
 
 def testRun(dataDict):
     # Drop small points
@@ -98,31 +102,26 @@ def testRun(dataDict):
 
     # Actually call localization
     motion_best = localization.fitPositionToVectors(camVect_X, camVect_Y, camVect_Z, ptSize, range(len(camVect_Z)))
-    bestPts = completeMotion(basePts, motion_best)
-    outPts.append(bestPts)
-
-    # for ii in range(3, 6): motion_best[ii] = motion_best[ii] % np.pi*2
-
-    # motion_best = (motion_best[0], motion_best[1], motion_best[2], motion_best[3]%2*np.pi, motion_best[4]%2*np.pi, motion_best[5]%2*np.pi)
-    
-    
     fooError = localization.getError()
+    
 
-    if True:
-    # if fooError < 10000:
-    # if doPlot3d: 
-        showPts = [np.array(dataDict['LED_X']), np.array(dataDict['LED_Y']), np.array(dataDict['LED_Z'])]
-        showPts = completeMotion(showPts, motion_best)
 
-        if DO_PLOT_3D:
-            plot3D.plotAlpha = 0.5
-            plot3D.setColor('orange')
-            plot3D.plotLedPositions(showPts)
-            plot3D.setColor('red')
-            plot3D.plotErrorLines(inVects, bestPts)
+    if DO_PLOT_3D:
+        bestTransformation = FFF.transformationSet([np.array(dataDict['LED_X']), np.array(dataDict['LED_Y']), np.array(dataDict['LED_Z'])])
+        bestTransformation.setTransformation(motion_best)
+        showPts = bestTransformation.getOutputs()
 
-            plot3D.setColor('black')
-            plot3D.plotCameraVectorSections(camVect_X, camVect_Y, camVect_Z, bestPts)
+        outPts.append(showPts)
+        
+
+        plot3D.plotAlpha = 0.5
+        plot3D.setColor('orange')
+        plot3D.plotLedPositions(showPts)
+        plot3D.setColor('red')
+        plot3D.plotErrorLines(inVects, showPts)
+
+        plot3D.setColor('black')
+        plot3D.plotCameraVectorSections(camVect_X, camVect_Y, camVect_Z, showPts)
 
         # plot3D.setColor('blue')
         # plot3D.plotCameraImageRange(camVect_X, camVect_Y, camVect_Z, bestPts)
@@ -136,6 +135,13 @@ def testRun(dataDict):
     print('')
 
 
+    if DO_FILEOUT:
+        global writeIndex
+        writePoints.write(f"{writeIndex},")
+        writeIndex += 1
+        for foo in motion_best: 
+            writePoints.write(f"{foo},")
+        writePoints.write(f"\n")
 
 # print(f"Error:{''.rjust(10, ' ')}   randFactor:{('').rjust(10, ' ')}", end='')
 print(f"      {''.rjust(10, ' ')}              {('').rjust(10, ' ')}", end='')
@@ -145,29 +151,24 @@ print('')
 for fooRun in dataRuns:
     testRun(fooRun)
 
-
-knownData_X = np.array([-279.4, -101.6, 101.6, 279.4, -152.4, 0, 152.4, -279.4, -101.6, 101.6, 279.4, ])
-knownData_Y = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ])
-knownData_Z = np.array([-228.6, -228.6, -228.6, -228.6, 0, 0, 0, 203.2, 203.2, 203.2, 203.2, ])
-
-cameraOffset_X = 0
-cameraOffset_Y = -736.6
-cameraOffset_Z = 863.6
+if DO_FILEOUT: writePoints.close()
 
 
-def printGrid(inData):
-    for ii in range(len(inData[0])):
-        print(" | ", end='')
-        for jj in range(len(inData)):
-            print(str(round(inData[jj][ii], 2)).rjust(8, ' '), end=' ')
-    print('')
 
-knownPts = deepcopy([knownData_X, knownData_Y, knownData_Z])
-knownPts = completeMotion(knownPts, [0, 0, 0, m.tan(cameraOffset_Z/cameraOffset_Y), 0, 0])
-centerDist = magnitude(np.array([cameraOffset_X, cameraOffset_Y, cameraOffset_Z]))
-knownPts = completeMotion(knownPts, [0, 0, centerDist, 0, 0, 0])
+# # display known positions for comparison
 
+# knownData_X = np.array([-279.4, -101.6, 101.6, 279.4, -152.4, 0, 152.4, -279.4, -101.6, 101.6, 279.4, ])
+# knownData_Y = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ])
+# knownData_Z = np.array([-228.6, -228.6, -228.6, -228.6, 0, 0, 0, 203.2, 203.2, 203.2, 203.2, ])
 
+# cameraOffset_X = 0
+# cameraOffset_Y = -736.6
+# cameraOffset_Z = 863.6
+
+# knownPts = deepcopy([knownData_X, knownData_Y, knownData_Z])
+# knownPts = completeMotion(knownPts, [0, 0, 0, m.tan(cameraOffset_Z/cameraOffset_Y), 0, 0])
+# centerDist = magnitude(np.array([cameraOffset_X, cameraOffset_Y, cameraOffset_Z]))
+# knownPts = completeMotion(knownPts, [0, 0, centerDist, 0, 0, 0])
 # plot3D.ax.scatter(knownPts[0], knownPts[2], knownPts[1], color='green')
 
 

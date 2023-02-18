@@ -9,10 +9,55 @@
 
 #define PI_VALUE 3.14159265
 
+
+transformationSet::transformationSet(vector<vector<double>> _input){
+    inputs = _input;
+    outputs = _input;
+    transformationFactors = {0, 0, 0, 0, 0, 0};
+}
+
+transformationSet::transformationSet(){
+    inputs = {{0}, {0}, {0}};
+    outputs = {{0}, {0}, {0}};
+    transformationFactors = {0, 0, 0, 0, 0, 0};
+}
+
+vector<vector<double>> transformationSet::setTransformation(vector<double> _factors){
+    transformationFactors = _factors;
+
+    // Load rotations as short names to make rotationMatrix at least a little legible
+    double A = transformationFactors[3];
+    double B = transformationFactors[4];
+    double C = transformationFactors[5];
+
+    // Calculate rotation matrix factors
+    vector<double> rotationMatrixA{ cos(B)*cos(C),  sin(A)*sin(B)*cos(C) -cos(A)*sin(C),  cos(A)*sin(B)*cos(C) +sin(A)*sin(C) };
+    vector<double> rotationMatrixB{ cos(B)*sin(C),  sin(A)*sin(B)*sin(C) +cos(A)*cos(C),  cos(A)*sin(B)*sin(C) -sin(A)*cos(C) };
+    vector<double> rotationMatrixC{ -sin(B),  sin(A)*cos(B),  cos(A)*cos(B) };
+
+
+    // Iterate through input, calculating each rotation and translation
+    for(size_t ii=0; ii<inputs[0].size(); ii++){
+        outputs[0][ii] = inputs[0][ii]*rotationMatrixA[0] + inputs[1][ii]*rotationMatrixA[1] + inputs[2][ii]*rotationMatrixA[2] + transformationFactors[0];
+        outputs[1][ii] = inputs[0][ii]*rotationMatrixB[0] + inputs[1][ii]*rotationMatrixB[1] + inputs[2][ii]*rotationMatrixB[2] + transformationFactors[1];
+        outputs[2][ii] = inputs[0][ii]*rotationMatrixC[0] + inputs[1][ii]*rotationMatrixC[1] + inputs[2][ii]*rotationMatrixC[2] + transformationFactors[2];
+    }
+
+    return(outputs);
+}
+
+
+
+
+
+
+
+
+
 // Randomly modify test position according to randomizeFactor
 // testPosition values are {X position, Y position, Z position, X rotation, Y rotation, Z rotation}
 void ledLocalizationFast::randomizeTestPosition(){
-    testPosition = currentPosition; // Load current as default
+    testPosition = currPos.getMotion(); // Load current as default
 
     size_t randCount = rand()%6 +1; // How many times to randomize a value
     for(size_t ii=0; ii<randCount; ii++){
@@ -37,7 +82,7 @@ void ledLocalizationFast::randomizeTestPosition(){
 // Randomly modify test position according to randomizeFactor
 // testPosition values are {X position, Y position, Z position, X rotation, Y rotation, Z rotation}
 void ledLocalizationFast::randomizeRotation(){
-    testPosition = currentPosition; // Load current as default
+    testPosition = currPos.getMotion(); // Load current as default
     size_t randCount = rand()%4 +1; // How many times to randomize a value
     for(size_t ii=0; ii<randCount; ii++){
         int randIndex = rand()%3 +3;
@@ -45,52 +90,21 @@ void ledLocalizationFast::randomizeRotation(){
     }
 }
 
-// Calculate LED_Testpos_XYZ arrays from testPosition and LED_Set_XYZ
-void ledLocalizationFast::calculateLedTestPositions(){
-    // Load rotations as short names to make rotationMatrix at least a little legible
-    double A = testPosition[3];
-    double B = testPosition[4];
-    double C = testPosition[5];
-
-    // Calculate rotation matrix factors
-    vector<double> rotationMatrixA{ cos(B)*cos(C), sin(A)*sin(B)*cos(C)-cos(A)*sin(C), cos(A)*sin(B)*cos(C)+sin(A)*sin(C) };
-    vector<double> rotationMatrixB{ cos(B)*sin(C), sin(A)*sin(B)*sin(C) +cos(A)*cos(C), cos(A)*sin(B)*sin(C) -sin(A)*cos(C) };
-    vector<double> rotationMatrixC{ -sin(B), sin(A)*cos(B), cos(A)*cos(B) };
-
-    // Iterate through LED_TestPos, calculating each rotation and translation
-    for(size_t ii=0; ii<LED_TestPos_X.size(); ii++){
-        LED_TestPos_X[ii] = testPosition[0] + LED_Set_X[ii]*rotationMatrixA[0] + LED_Set_Y[ii]*rotationMatrixA[1] + LED_Set_Z[ii]*rotationMatrixA[2];
-        LED_TestPos_Y[ii] = testPosition[1] + LED_Set_X[ii]*rotationMatrixB[0] + LED_Set_Y[ii]*rotationMatrixB[1] + LED_Set_Z[ii]*rotationMatrixB[2];
-        LED_TestPos_Z[ii] = testPosition[2] + LED_Set_X[ii]*rotationMatrixC[0] + LED_Set_Y[ii]*rotationMatrixC[1] + LED_Set_Z[ii]*rotationMatrixC[2];
-    }
-}
-
-
-
-// // MAYBE BROKEN ATTEMPTING FIX
-// // Calculate LED_Testpos_XYZ arrays from testPosition and LED_Set_XYZ
-// void ledLocalizationFast::calculateLedTestPositions(){
-//     // Load rotations as short names to make rotationMatrix at least a little legible
-//     double A = testPosition[3];
-//     double B = testPosition[4];
-//     double C = testPosition[5];
-
-//     // Calculate rotation matrix factors
-//     vector<double> rotationMatrixA{cos(C)*cos(B), -sin(C)*cos(A) + cos(C)*sin(A)*sin(B), sin(C)*sin(A)+cos(C)*sin(B)*cos(A)};
-//     vector<double> rotationMatrixB{sin(C)*cos(B), cos(C)*cos(A) + sin(C)*sin(B)*sin(A), -cos(C)*sin(A)+sin(C)*sin(B)*cos(A)};
-//     vector<double> rotationMatrixC{-sin(B), cos(B)*sin(A), cos(B)*cos(A)};
-
-//     // Iterate through LED_TestPos, calculating each rotation and translation
-//     for(size_t ii=0; ii<LED_TestPos_X.size(); ii++){
-//         LED_TestPos_X[ii] = testPosition[0] + LED_Set_X[ii]*rotationMatrixA[0] + LED_Set_Y[ii]*rotationMatrixB[0] + LED_Set_Z[ii]*rotationMatrixC[0];
-//         LED_TestPos_Y[ii] = testPosition[1] + LED_Set_X[ii]*rotationMatrixA[1] + LED_Set_Y[ii]*rotationMatrixB[1] + LED_Set_Z[ii]*rotationMatrixC[1];
-//         LED_TestPos_Z[ii] = testPosition[2] + LED_Set_X[ii]*rotationMatrixA[2] + LED_Set_Y[ii]*rotationMatrixB[2] + LED_Set_Z[ii]*rotationMatrixC[2];
-//     }
-// }
-
 
 double linePtDistanceSquared(double xVect, double yVect, double zVect, double xPos, double yPos, double zPos){
-    return (pow(yVect*zPos - zVect*yPos, 2) + pow(xVect*zPos - zVect*xPos, 2) + pow(xVect*yPos - yVect*xPos, 2)) / (pow(xVect, 2) + pow(yVect, 2) + pow(zVect, 2));
+    return(
+        ( pow(yVect*zPos - zVect*yPos, 2)
+        + pow(zVect*xPos - xVect*zPos, 2) 
+        + pow(xVect*yPos - yVect*xPos, 2) )
+        / (pow(xVect, 2) + pow(yVect, 2) + pow(zVect, 2))
+    );
+
+    // return(
+    //     ( pow(yVect*zPos - zVect*yPos, 2) 
+    //     +pow(xVect*zPos - zVect*xPos, 2) 
+    //     +pow(xVect*yPos - yVect*xPos, 2) ) 
+    //     / (pow(xVect, 2) + pow(yVect, 2) + pow(zVect, 2))
+    // );
 }
 
 
@@ -101,7 +115,7 @@ double ledLocalizationFast::calculateError(){
 
     for(size_t ii=0; ii<InputVect_LED_ID.size(); ii++){
         int LED_Index = InputVect_LED_ID[ii];
-        testError += linePtDistanceSquared( InputVect_X[ii], InputVect_Y[ii], InputVect_Z[ii], LED_TestPos_X[LED_Index], LED_TestPos_Y[LED_Index], LED_TestPos_Z[LED_Index] ) * InputVect_S[ii];
+        testError += linePtDistanceSquared( InputVect_X[ii], InputVect_Y[ii], InputVect_Z[ii], testPos[0][LED_Index], testPos[1][LED_Index], testPos[2][LED_Index] ) * InputVect_S[ii];
     }
     
     return(testError);
@@ -111,18 +125,14 @@ double ledLocalizationFast::calculateError(){
 // Init class for localization
 ledLocalizationFast::ledLocalizationFast(vector<double> _LED_X, vector<double> _LED_Y, vector<double> _LED_Z, double _pos_x, double _pos_y, double _pos_z){
     // Load starting position
-    currentPosition[0] = _pos_x;
-    currentPosition[1] = _pos_y;
-    currentPosition[2] = _pos_z;
+    LED_Set = {_LED_X, _LED_Y, _LED_Z};
+    vector<double> defaultMotion = {_pos_x, _pos_y, _pos_z, 0, 0, 0};
 
-    // Save LED position
-    LED_Set_X = _LED_X;
-    LED_Set_Y = _LED_Y;
-    LED_Set_Z = _LED_Z;
+    currPos = transformationSet(LED_Set);
+    currPos.setTransformation(defaultMotion);
 
-    LED_TestPos_X = _LED_X;
-    LED_TestPos_Y = _LED_Y;
-    LED_TestPos_Z = _LED_Z;
+    testPos = transformationSet(LED_Set);
+    testPos.setTransformation(defaultMotion);
 
     // Initialize srand
     srand (time(NULL));
@@ -139,20 +149,20 @@ vector<double> ledLocalizationFast::fitPositionToVectors(vector<double> _Vect_X,
     randomizeFactor = default_randomizeFactor; // load default randomization factor
     
     // Calculate and save initial error
-    testPosition = currentPosition;
-    calculateLedTestPositions();
+    testPosition = currPos.getMotion();
+    testPos.setTransformation(testPosition);
     calculateError();
     currentError = testError;
     bool hasImproved = 0;
 
     for(size_t ii=0; ii<randomizeCount; ii++){
         randomizeTestPosition();
-        calculateLedTestPositions();
+        testPos.setTransformation(testPosition);
         calculateError();
         
         if(testError < currentError){ // New best found
             currentError = testError; // Save best error
-            currentPosition = testPosition; // Save best position
+            currPos.setTransformation(testPos.getMotion()); // Save best position
 
             // printf("%10.6f   %6.6f   ", testError, randomizeFactor); // Print error and randomize factor
 
@@ -167,7 +177,7 @@ vector<double> ledLocalizationFast::fitPositionToVectors(vector<double> _Vect_X,
             
             // Exit early if acceptable
             // if(randomizeFactor < acceptableRandomizerVal) return currentPosition;
-            if(currentError < acceptableError) return currentPosition;
+            if(currentError < acceptableError) return currPos.getMotion();
             
         }
         
@@ -175,7 +185,7 @@ vector<double> ledLocalizationFast::fitPositionToVectors(vector<double> _Vect_X,
 
     // printf("Error: %5.4f      randomizeFactor: %5.4f      \n\n", currentError, randomizeFactor);
 
-    return(currentPosition);
+    return(currPos.getMotion());
 }
 
 

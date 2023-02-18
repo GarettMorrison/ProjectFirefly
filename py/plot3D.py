@@ -83,6 +83,8 @@ def showPlot():
     ax.set_xlabel('X')
     ax.set_zlabel('Y')
     ax.set_ylabel('Z')
+    # ax.set_ylim(ax.get_ylim()[::-1])
+    ax.invert_yaxis()
 
     set_axes_equal(ax)
     plt.show()

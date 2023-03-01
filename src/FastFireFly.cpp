@@ -5,10 +5,9 @@
 #include <iostream>
   
 //our header file
-#include "FastFireFly.h"
+#include "FastFireFly.hh"
 
 #define PI_VALUE 3.14159265
-
 
 transformationSet::transformationSet(vector<vector<double>> _input){
     inputs = _input;
@@ -59,12 +58,14 @@ vector<vector<double>> transformationSet::setTransformation(vector<double> _fact
 void ledLocalizationFast::randomizeTestPosition(){
     testPosition = currPos.getMotion(); // Load current as default
 
-    size_t randCount = rand()%6 +1; // How many times to randomize a value
+    size_t randCount = rand()%5 +2; // How many times to randomize a value
     for(size_t ii=0; ii<randCount; ii++){
         int randIndex = rand()%6;
-        if(randIndex < 3) testPosition[randIndex] += randomizeFactor * (2*(double)rand()/RAND_MAX -1); // Randomize position value
+        if(randIndex < 3){
+            testPosition[randIndex] += randomizeFactor * (2*(double)rand()/RAND_MAX -1); // Randomize position value
+        }
         else{   // Randomize rotation value
-            testPosition[randIndex] += PI_VALUE*(randomizeFactor/default_randomizeFactor) * (2*(double)rand()/RAND_MAX -1);
+            testPosition[randIndex] += PI_VALUE*(2*randomizeFactor/default_randomizeFactor) * (2*(double)rand()/RAND_MAX -1);
             // limit rotations to +- PI
             while(testPosition[randIndex] > PI_VALUE) testPosition[randIndex] -= 2*PI_VALUE;
             while(testPosition[randIndex] < -PI_VALUE) testPosition[randIndex] += 2*PI_VALUE;
@@ -72,10 +73,10 @@ void ledLocalizationFast::randomizeTestPosition(){
     }
 
     // Make sure position is in front of camera
-    if(testPosition[2] < 0.0) testPosition[2] *= -1.0;
+    if(testPosition[0] < 0.0) testPosition[0] *= -1.0;
     
     // Prevent hitting local optimal by centering on camera
-    if(testPosition[2] < mininumValueZ) testPosition[2] += mininumValueZ;
+    if(testPosition[0] < mininumValueX) testPosition[0] += mininumValueX;
 }
 
 
@@ -91,42 +92,15 @@ void ledLocalizationFast::randomizeRotation(){
 }
 
 
-double linePtDistanceSquared(double xVect, double yVect, double zVect, double xPos, double yPos, double zPos){
-    return(
-        ( pow(yVect*zPos - zVect*yPos, 2)
-        + pow(zVect*xPos - xVect*zPos, 2) 
-        + pow(xVect*yPos - yVect*xPos, 2) )
-        / (pow(xVect, 2) + pow(yVect, 2) + pow(zVect, 2))
-    );
-
-    // return(
-    //     ( pow(yVect*zPos - zVect*yPos, 2) 
-    //     +pow(xVect*zPos - zVect*xPos, 2) 
-    //     +pow(xVect*yPos - yVect*xPos, 2) ) 
-    //     / (pow(xVect, 2) + pow(yVect, 2) + pow(zVect, 2))
-    // );
-}
 
 
-
-// Calculate error of current test position
-double ledLocalizationFast::calculateError(){
-    testError = 0;
-
-    for(size_t ii=0; ii<InputVect_LED_ID.size(); ii++){
-        int LED_Index = InputVect_LED_ID[ii];
-        testError += linePtDistanceSquared( InputVect_X[ii], InputVect_Y[ii], InputVect_Z[ii], testPos[0][LED_Index], testPos[1][LED_Index], testPos[2][LED_Index] ) * InputVect_S[ii];
-    }
-    
-    return(testError);
-}
 
 
 // Init class for localization
-ledLocalizationFast::ledLocalizationFast(vector<double> _LED_X, vector<double> _LED_Y, vector<double> _LED_Z, double _pos_x, double _pos_y, double _pos_z){
+ledLocalizationFast::ledLocalizationFast(vector<vector<double>> _LED_Set, vector<double> startPos){
     // Load starting position
-    LED_Set = {_LED_X, _LED_Y, _LED_Z};
-    vector<double> defaultMotion = {_pos_x, _pos_y, _pos_z, 0, 0, 0};
+    LED_Set = _LED_Set;
+    vector<double> defaultMotion = startPos;
 
     currPos = transformationSet(LED_Set);
     currPos.setTransformation(defaultMotion);
@@ -138,27 +112,92 @@ ledLocalizationFast::ledLocalizationFast(vector<double> _LED_X, vector<double> _
     srand (time(NULL));
 }
 
+
+// Calculate error of current test position
+double ledLocalizationFast::error_cameraAngles(){
+    // Calculate center of lantern in image
+    double lanternOrigin_Z = atan( testPosition[2] / testPosition[0] );
+    double lanternOrigin_Y = atan( testPosition[1] / testPosition[0] );
+
+    // Calculate image angles from test position
+    testError = 0;
+    for(size_t ii=0; ii<LED_indices.size(); ii++){
+        unsigned int fooIndex = LED_indices[ii]; // Get corresponding LED data array
+
+        // Calculate test angle for each set of position points
+        LED_TestAng[0][ii] = atan( testPos[2][fooIndex] / testPos[0][fooIndex] );
+        LED_TestAng[1][ii] = atan( testPos[1][fooIndex] / testPos[0][fooIndex] );
+
+        // printf("fooIndex:%ld     testPos:(%4.4f, %4.4f, %4.4f)     LED_TestAng:(%4.4f, %4.4f) \n", fooIndex, testPos[0][fooIndex], testPos[1][fooIndex], testPos[2][fooIndex], LED_TestAng[0][ii], LED_TestAng[1][ii]);
+
+        double A = -(LED_TestAng[1][ii] - lanternOrigin_Z);
+        double B = (LED_TestAng[0][ii] - lanternOrigin_Y);
+        double C = -lanternOrigin_Z*B -lanternOrigin_Y*A;
+        
+        testError += abs(A*LED_TestAng[0][ii] + B*LED_TestAng[1][ii] + C) / (pow(A, 2) + pow(B, 2));
+
+        // testError += pow(LED_TestAng[0][ii]-ang_set[0][ii], 2) + pow(LED_TestAng[1][ii]-ang_set[1][ii], 2); // Point distance sum
+
+        // printf("%6.6f, %6.6f     %6.6f, %6.6f     \n", LED_TestAng[0][ii], LED_TestAng[1][ii], ang_set[0][ii], ang_set[1][ii]);
+    }
+    prevErrorReal = false;
+    return(testError);
+}
+
+// Calculate error of current test position
+double ledLocalizationFast::error_cameraPosition(){
+    // // Calculate center of lantern in image
+    // double lanternOrigin_Z = atan( testPosition[2] / testPosition[0] );
+    // double lanternOrigin_Y = atan( testPosition[1] / testPosition[0] );
+
+    // Calculate image angles from test position
+    testError = 0;
+    for(size_t ii=0; ii<LED_indices.size(); ii++){
+        unsigned int fooIndex = LED_indices[ii]; // Get corresponding LED data array
+
+        // Calculate test angle for each set of position points
+        if(testPos[0][fooIndex] > 0.0001){
+            LED_TestAng[0][ii] = atan( testPos[2][fooIndex] / testPos[0][fooIndex] );
+            LED_TestAng[1][ii] = atan( testPos[1][fooIndex] / testPos[0][fooIndex] );
+        }
+        else{
+            LED_TestAng[0][ii] = 3.14159/2;
+            LED_TestAng[1][ii] = 3.14159/2;
+        }
+        
+        testError += pow(ang_set[0][ii] - LED_TestAng[1][ii], 2) + pow(ang_set[1][ii] - LED_TestAng[0][ii], 2);
+
+        // printf("%6.6f, %6.6f     %6.6f, %6.6f     \n", LED_TestAng[0][ii], LED_TestAng[1][ii], ang_set[0][ii], ang_set[1][ii]);
+    }
+    return(testError);
+}
+
 // Fit to position and run localization
-vector<double> ledLocalizationFast::fitPositionToVectors(vector<double> _Vect_X, vector<double> _Vect_Y, vector<double> _Vect_Z, vector<double> _Vect_S, vector<double> _LED_Indices){
-    InputVect_X = _Vect_X;
-    InputVect_Y = _Vect_Y;
-    InputVect_Z = _Vect_Z;
-    InputVect_S = _Vect_S;
-    InputVect_LED_ID = _LED_Indices;
+vector<double> ledLocalizationFast::fitData_imageCentric(vector<vector<double>> _ang_set, vector<unsigned int> _LED_indices, size_t randomizeCount){
+    ang_set = _ang_set;
+    LED_indices = _LED_indices;
+    
+    LED_TestAng = ang_set;
+
+    ang_line_set = _ang_set;
+    for(size_t ii=0; ii<LED_indices.size(); ii++){
+        ang_line_set[0][ii] = tan(ang_set[0][ii]);
+        ang_line_set[1][ii] = tan(ang_set[1][ii]);
+    }
 
     randomizeFactor = default_randomizeFactor; // load default randomization factor
     
     // Calculate and save initial error
     testPosition = currPos.getMotion();
     testPos.setTransformation(testPosition);
-    calculateError();
+    error_cameraPosition();
     currentError = testError;
     bool hasImproved = 0;
 
     for(size_t ii=0; ii<randomizeCount; ii++){
         randomizeTestPosition();
         testPos.setTransformation(testPosition);
-        calculateError();
+        error_cameraPosition();
         
         if(testError < currentError){ // New best found
             currentError = testError; // Save best error
@@ -166,11 +205,10 @@ vector<double> ledLocalizationFast::fitPositionToVectors(vector<double> _Vect_X,
 
             // printf("%10.6f   %6.6f   ", testError, randomizeFactor); // Print error and randomize factor
 
-            // for(double ii : currentPosition) printf("%5.4f   ", ii);
-            // printf("\n");
-
             randomizeFactor = randomizeFactor*2; // Increase margin on improvement
             hasImproved = 1;
+            
+            // printf("%4ld   %4.6f      %6.3f     !!!!!!!!!!!!!!!!!!    %4.6f\n", ii, testError, randomizeFactor, currentError);
         }
         else{
             if(hasImproved) randomizeFactor = randomizeFactor*0.99; // Decrease margin if no improvement
@@ -178,8 +216,11 @@ vector<double> ledLocalizationFast::fitPositionToVectors(vector<double> _Vect_X,
             // Exit early if acceptable
             // if(randomizeFactor < acceptableRandomizerVal) return currentPosition;
             if(currentError < acceptableError) return currPos.getMotion();
+            // printf("%4ld   %4.6f      %6.3f\n", ii, testError, randomizeFactor);
             
         }
+
+        
         
     }
 
@@ -190,94 +231,75 @@ vector<double> ledLocalizationFast::fitPositionToVectors(vector<double> _Vect_X,
 
 
 
+double linePtDistanceSquared(double xVect, double yVect, double zVect, double xPos, double yPos, double zPos){
+    return(
+        ( pow(yVect*zPos - zVect*yPos, 2)
+        + pow(zVect*xPos - xVect*zPos, 2) 
+        + pow(xVect*yPos - yVect*xPos, 2) )
+        / (pow(xVect, 2) + pow(yVect, 2) + pow(zVect, 2))
+    );
+}
 
-// // Fit to position and run localization
-// vector<double> ledLocalizationFast::regressionFitLessRandom(vector<double> _Vect_X, vector<double> _Vect_Y, vector<double> _Vect_Z, vector<double> _LED_Indices){
-//     InputVect_X = _Vect_X;
-//     InputVect_Y = _Vect_Y;
-//     InputVect_Z = _Vect_Z;
-//     InputVect_LED_ID = _LED_Indices;
+// Calculate error of current test position
+double ledLocalizationFast::error_3DpointLine(){
+    double fooError = 0;
+    testError = 0;
 
-//     randomizeFactor = default_randomizeFactor; // load default randomization factor
+    for(size_t ii=0; ii<LED_indices.size(); ii++){
+        int LED_Index = LED_indices[ii];
+        fooError = linePtDistanceSquared( 1.0, ang_line_set[0][ii], ang_line_set[1][ii], testPos[0][LED_Index], testPos[1][LED_Index], testPos[2][LED_Index] );
+        testError += fooError;
+    }
     
-//     // Calculate and save initial error
-//     testPosition = currentPosition;
-//     calculateLedTestPositions();
-//     calculateError();
-//     currentError = testError;
+    return(testError);
+}
 
-//     for(size_t ii=0; ii<randomizeCount; ii++){
-//         bool newBestFound = 0;
-//         for(int xTrans=-1; xTrans<2; xTrans += 2){
-//             for(int yTrans=-1; yTrans<2; yTrans += 1){
-//                 for(int zTrans=-1; zTrans<2; zTrans += 1){
-//                     // Modify variables
-//                     testPosition = currentPosition;
+// Fit to position and run localization
+vector<double> ledLocalizationFast::fitData_3D(vector<vector<double>> _ang_set, vector<unsigned int> _LED_indices, size_t randomizeCount){
+    ang_set = _ang_set;
+    LED_indices = _LED_indices;
+    LED_dropValue = _LED_indices;
+    
+    LED_TestAng = ang_set;
 
-//                     if(xTrans == 1) testPosition[0] *= randomizeFactor;
-//                     else if(xTrans == -1) testPosition[0] *= randomizeFactor;
-                    
-//                     if(yTrans == 1) testPosition[1] *= randomizeFactor;
-//                     else if(yTrans == -1) testPosition[1] *= randomizeFactor;
-                    
-//                     if(zTrans == 1) testPosition[2] *= randomizeFactor;
-//                     else if(zTrans == -1) testPosition[2] *= randomizeFactor;
+    ang_line_set = _ang_set;
+    for(size_t ii=0; ii<LED_indices.size(); ii++){
+        LED_dropValue[ii] = 0;
+        ang_line_set[0][ii] = tan(ang_set[0][ii]);
+        ang_line_set[1][ii] = tan(ang_set[1][ii]);
+    }
 
+    randomizeFactor = default_randomizeFactor; // load default randomization factor
+    
+    // Calculate and save initial error
+    testPosition = currPos.getMotion();
+    testPos.setTransformation(testPosition);
+    error_3DpointLine();
+    currentError = testError;
 
-//                     // Make sure position is in front of camera
-//                     if(testPosition[2] < 0.0) testPosition[2] *= -1.0;
-//                     // Prevent hitting local optimal by centering on camera
-//                     if(testPosition[2] < mininumValueZ) testPosition[2] += mininumValueZ;
+    for(size_t ii=0; ii<randomizeCount; ii++){
+        randomizeTestPosition();
+        testPos.setTransformation(testPosition);
+        error_3DpointLine();
+        
+        if(testError < currentError){ // New best found
+            currentError = testError; // Save best error
+            currPos.setTransformation(testPosition); // Save best position
 
-
-//                     calculateLedTestPositions();
-//                     calculateError();
-//                     if(testError < currentError){ // New best found
-//                         newBestFound = 1; // New best found, increase range after this loop
-//                         currentError = testError; // Save best error
-//                         currentPosition = testPosition; // Save best position
-//                     }
-
-
-//                     // Randomize rotation and check again
-//                     for(ii=0; ii<3; ii++){
-//                         randomizeRotation();
-//                         calculateLedTestPositions();
-//                         calculateError();
-//                         if(testError < currentError){ // New best found
-//                             newBestFound = 1; // New best found, increase range after this loop
-//                             currentError = testError; // Save best error
-//                             currentPosition = testPosition; // Save best position
-//                         }
-//                     }
-                    
-//                 }
-//             }
-//         }
-
-//         // printf("%5.4f\n", randomizeFactor);
-
-//         if(newBestFound){
-//             randomizeFactor = randomizeFactor*2; // Increase margin on improvement
-//         }
-//         else{
-//             randomizeFactor = randomizeFactor*6/7; // Decrease margin if no improvement
-
-//             if(randomizeFactor < acceptableRandomizerVal) return currentPosition; // Exit early if acceptable
-//         }
-
-
-//         for(size_t jj=0; jj<10; jj++){
-//             randomizeRotation();
-//             calculateLedTestPositions();
-//             calculateError();
+            randomizeFactor = randomizeFactor*2; // Increase margin on improvement
             
-//             if(testError < currentError){ // New best found
-//                 currentError = testError; // Save best error
-//                 currentPosition = testPosition; // Save best position
-//             }
-//         }
-//     }
+            // printf("%4.6f     %4.6f, %4.6f, %4.6f\n", currentError, testPosition[0], testPosition[1], testPosition[2]);
 
-//     return(currentPosition);
-// }
+            // printf("%4ld   %4.6f      %6.3f     !!!!!!!!!!!!!!!!!!    %4.6f\n", ii, testError, randomizeFactor, currentError);
+            if(currentError < acceptableError) return currPos.getMotion();
+        }
+        else{
+            randomizeFactor = randomizeFactor*0.98; // Decrease margin if no improvement
+            // printf("%4ld   %4.6f      %6.3f\n", ii, testError, randomizeFactor);
+        }
+    }
+
+    // printf("Error: %5.4f      randomizeFactor: %5.4f      \n\n", currentError, randomizeFactor);
+
+    return(currPos.getMotion());
+}

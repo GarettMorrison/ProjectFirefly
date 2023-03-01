@@ -7,7 +7,7 @@ swig/$(libTitle).o swig/$(libTitle)_wrap.o: src/$(libTitle)_wrap.cxx swig/$(libT
 	g++ -c -fpic src/$(libTitle).cpp -o swig/$(libTitle).o
 	g++ -c -fpic src/$(libTitle)_wrap.cxx -I/usr/include/python3.8  -o swig/$(libTitle)_wrap.o
 
-src/$(libTitle)_wrap.cxx swig/$(libTitle).py: src/$(libTitle).i src/$(libTitle).h src/$(libTitle).cpp
+src/$(libTitle)_wrap.cxx swig/$(libTitle).py: src/$(libTitle).i src/$(libTitle).hh src/$(libTitle).cpp
 	swig -python -c++ -outdir swig src/$(libTitle).i 
 
 
@@ -18,4 +18,3 @@ clean:
 	rm -f swig/$(libTitle).py
 	rm -f swig/$(libTitle).o
 	rm -f swig/_$(libTitle).so
-

@@ -15,7 +15,7 @@ LED_BRIGHTNESS_MIN = 5
 LED_BRIGHTNESS_MAX = 255
 LED_BRIGHTNESS_DEFAULT = 150
 
-SPOT_SIZE_MIN = 90
+SPOT_SIZE_MIN = 60
 SPOT_SIZE_MAX = 130
 
 MAX_ATTEMPTS = 6
@@ -64,13 +64,25 @@ class webcam:
             for fooExclude in fooExclusionSetNP:
                 self.LED_nonConsecutives[fooExclude][fooExclusionSetNP] = 1
         
+
+        # Load and configure camera data                
+        inFile =  open('camera_calibration/cameraCal.yaml', 'rb')
+        cameraDict = pkl.load(inFile)
+        inFile.close()
+        self.Camera_Matrix = cameraDict['Camera_Matrix']
+        self.Distortion_Coefficients = cameraDict['Distortion_Coefficient']
+        self.imageShape = cameraDict['imageShape']
+        self.newcameramtx, self.roi = cv2.getOptimalNewCameraMatrix(self.Camera_Matrix, self.Distortion_Coefficients, self.imageShape, 1, self.imageShape)
+        
+
         # Setting up cam
         self.cam = cv2.VideoCapture(0)
         result, self.img = self.cam.read()
-        self.prevImg = self.img
         self.img_gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
         self.lastImgTime = time.time()
-        
+        self.readImage()
+
+                
         # Set up feedback images
         self.img_posOverLay = np.zeros_like(self.img)
         self.img_subtract = np.zeros_like(self.img)
@@ -86,8 +98,6 @@ class webcam:
         # cv2.waitKey(1)
         # plt.draw()
         self.clearData()
-
-
 
     def clearData(self):
         # Output information about LEDs
@@ -112,10 +122,11 @@ class webcam:
         self.failedAttempts = [[] for foo in range(self.LED_count)]
         self.finishedLEDs = []
 
-
+    def takePhoto(self):
+        result, self.img = self.cam.read()
 
     # Load input image
-    def readImage(self):        
+    def readImage(self):
         # Delay if too soon after previous image
         waitTime = m.floor(1000*(MIN_PHOTO_PERIOD - (time.time()-self.lastImgTime) ))
         if waitTime > 0:
@@ -126,8 +137,10 @@ class webcam:
         self.prevImg_gray = self.img_gray
         
         # Get new image
-        result, self.img = self.cam.read()
-        self.img_gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
+        self.takePhoto()
+        self.img_unDist = cv2.undistort(self.img, self.Camera_Matrix, self.Distortion_Coefficients, None, self.newcameramtx)
+
+        self.img_gray = cv2.cvtColor(self.img_unDist, cv2.COLOR_BGR2GRAY)
 
         self.lastImgTime = time.time()
 
@@ -149,20 +162,25 @@ class webcam:
         blurConvolution = (5, 5)        
         self.img_subtract = cv2.subtract(cv2.GaussianBlur(self.img_gray, blurConvolution, 0), cv2.GaussianBlur(self.prevImg_gray, blurConvolution, 0)) 
 
-        # img_subtract = cv2.subtract(cv2.GaussianBlur(self.img, blurConvolution, 0), cv2.GaussianBlur(self.prevImg, blurConvolution, 0)) 
-        # imgGrey_sub = cv2.cvtColor(img_subtract, cv2.COLOR_BGR2GRAY)
-
         # Threshold subtracted image
         ret, self.img_thresh = cv2.threshold(self.img_subtract, TRESH_MIN, 255, cv2.THRESH_BINARY)
         contours, hierarchy= cv2.findContours(self.img_thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         sorted_contours= sorted(contours, key=cv2.contourArea, reverse= True)
         
-        if len(sorted_contours) == 0:
-            self.failedAttempts[ledIndex].append(['NO SPOT', 0, self.LED_brightness[ledIndex], 0])
-            self.adjustBrightness(ledIndex, 60)
+        # Catch error states
+        if len(sorted_contours) == 0: # No point detected
+            if len(self.failedAttempts[ledIndex]) == 0: # No point and is first attempt, so set brightness to max
+                self.LED_brightness[ledIndex] = 255
+                self.failedAttempts[ledIndex].append(['NO SPOT, SET MAX', 0, self.LED_brightness[ledIndex], 0])
+            elif self.LED_brightness[ledIndex] == 255: # No point at maximum brightness, bail
+                self.failedAttempts[ledIndex].append(['NO SPOT AT MAX', 0, self.LED_brightness[ledIndex], 0])
+                self.finishedLEDs.append(ledIndex)
+            else: # No point but not first attept, undershot diff, make change
+                self.failedAttempts[ledIndex].append(['NO SPOT', 0, self.LED_brightness[ledIndex], 0])
+                self.adjustBrightness(ledIndex, 60)
             return(False)
-
-        elif len(sorted_contours) > 1:
+        
+        elif len(sorted_contours) > 1: # Too many points (reflections), decrease brightness
             self.failedAttempts[ledIndex].append(['MULTIPLE SPOTS', 0, self.LED_brightness[ledIndex], len(sorted_contours)])
             self.adjustBrightness(ledIndex, -60)
             return(False)
@@ -170,34 +188,48 @@ class webcam:
         # Draw contours and load pixel data
         for bar in sorted_contours[1:]:
             cv2.drawContours(self.img_thresh, bar, -1, 50, 5)
+        
         mass_y, mass_x = np.where(self.img_thresh >= 255)
         imgPos_s = len(mass_x) # Number of pixels in spot
 
 
         # Catch if spot size is out of range
         if imgPos_s < SPOT_SIZE_MIN: # Too small
-            self.failedAttempts[ledIndex].append(['SPOT UNDER SIZE', imgPos_s, self.LED_brightness[ledIndex], 1])
-            if len(self.failedAttempts[ledIndex]) > 1 and self.failedAttempts[ledIndex][-2][0] == 'SPOT UNDER SIZE':
-                self.adjustBrightness(ledIndex, 4*(SPOT_SIZE_MIN - imgPos_s))
+            if len(self.failedAttempts[ledIndex]) > 0 and self.failedAttempts[ledIndex][-1][2] == 255 and 'SPOT UNDER SIZE' in self.failedAttempts[ledIndex][-1][0]: # Previous attempt was at max brightness and too small, bail
+                self.failedAttempts[ledIndex].append(['SPOT UNDER SIZE AT MAX', imgPos_s, self.LED_brightness[ledIndex], 1])
+                self.finishedLEDs.append(ledIndex)
+                return(False)
+            
+            if len(self.failedAttempts[ledIndex]) < 1: # initial attempt was first try and too small, set to max
+                self.LED_brightness[ledIndex] = 255
+                self.failedAttempts[ledIndex].append(['SPOT UNDER SIZE AT START', imgPos_s, self.LED_brightness[ledIndex], 1])
+                return(False)
+            
+            if len(self.failedAttempts[ledIndex]) > 0 and self.failedAttempts[ledIndex][-1][0] == 'SPOT UNDER SIZE': # Undercorrection
+                self.adjustBrightness(ledIndex, (SPOT_SIZE_MIN - imgPos_s)*2)
+            elif len(self.failedAttempts[ledIndex]) > 0 and self.failedAttempts[ledIndex][-1][0] == 'SPOT OVER SIZE': # Overcorrection
+                self.adjustBrightness(ledIndex, (SPOT_SIZE_MIN - imgPos_s)/4)
             else:
                 self.adjustBrightness(ledIndex, (SPOT_SIZE_MIN - imgPos_s))
+                
+            self.failedAttempts[ledIndex].append(['SPOT UNDER SIZE', imgPos_s, self.LED_brightness[ledIndex], 1])
             return(False)
 
-        elif imgPos_s > SPOT_SIZE_MAX and self.LED_brightness[ledIndex] != SPOT_SIZE_MIN: # Too large
-            self.failedAttempts[ledIndex].append(['SPOT OVER SIZE', imgPos_s, self.LED_brightness[ledIndex], 1])
-
-            if len(self.failedAttempts[ledIndex]) > 1 and self.failedAttempts[ledIndex][-2][0] == 'SPOT OVER SIZE':
-                self.adjustBrightness(ledIndex, 3*(SPOT_SIZE_MAX - imgPos_s))
+        elif imgPos_s > SPOT_SIZE_MAX: # Too large
+            # if len(self.failedAttempts[ledIndex]) > 1 and self.failedAttempts[ledIndex][-1][0] == 'SPOT OVER SIZE': # Undercorrection
+            #     self.adjustBrightness(ledIndex, (SPOT_SIZE_MAX - imgPos_s)*2)
+            if len(self.failedAttempts[ledIndex]) > 0 and self.failedAttempts[ledIndex][-1][0] == 'SPOT UNDER SIZE': # Overcorrection
+                self.adjustBrightness(ledIndex, (SPOT_SIZE_MAX - imgPos_s)/3)
             else:
-                self.adjustBrightness(ledIndex, (SPOT_SIZE_MAX - imgPos_s))
+                self.adjustBrightness(ledIndex, (SPOT_SIZE_MAX - imgPos_s)*2)
+                
+            self.failedAttempts[ledIndex].append(['SPOT OVER SIZE', imgPos_s, self.LED_brightness[ledIndex], 1])
             return(False)
 
 
         # Get center of LED position
         imgPos_x = np.average(mass_x)
         imgPos_y = np.average(mass_y)
-        imgAng_x = (imgPos_x - self.img_thresh.shape[1]/2) / 668
-        imgAng_y = (self.img_thresh.shape[0]/2 - imgPos_y) / 668 
         
         # Save data point
         self.ledData['size'].append(imgPos_s)
@@ -205,20 +237,28 @@ class webcam:
         self.ledData['brightness'].append(self.LED_brightness[ledIndex])
         self.ledData['xPix'].append(imgPos_x)
         self.ledData['yPix'].append(imgPos_y)
-        self.ledData['xAng'].append(imgAng_x)
-        self.ledData['yAng'].append(imgAng_y)
         self.ledData['LED_X'].append(self.LED_positions[0][ledIndex])
         self.ledData['LED_Y'].append(self.LED_positions[1][ledIndex])
         self.ledData['LED_Z'].append(self.LED_positions[2][ledIndex])
-        
-        self.finishedLEDs.append(ledIndex)
 
-        print(f"Success {len(self.ledData['LED_X'])} {' '.ljust(80)} img_x:{round(imgPos_x,2)}   img_y:{round(imgPos_y,2)}   img_s:{round(imgPos_s,2)}")
+        # Use camera matrix to convert points to angle
+        imgAng_x = (imgPos_x - self.newcameramtx[0][2])/self.newcameramtx[0][0]
+        imgAng_y = (self.newcameramtx[1][2] - imgPos_y)/self.newcameramtx[1][1]
+        self.ledData['xAng'].append(imgAng_x)
+        self.ledData['yAng'].append(imgAng_y)
+
+        # print(f"imgPos_x:{imgPos_x}")
+        # print(f"self.newcameramtx[0][2]:{self.newcameramtx[0][2]}")
+        # print(f"self.newcameramtx[0][0]:{self.newcameramtx[0][0]}")
+        # print(f"(imgPos_x - self.newcameramtx[0][2]):{(imgPos_x - self.newcameramtx[0][2])}")
+        # print(f"(imgPos_x - self.newcameramtx[0][2]) * self.newcameramtx[0][0]:{(imgPos_x - self.newcameramtx[0][2]) * self.newcameramtx[0][0]}")
+        # print(f"\n\n")
+
+        self.finishedLEDs.append(ledIndex)
+        print(f"Success {len(self.ledData['LED_X'])} {' '.ljust(80)} xAng:{round(imgAng_x,2)}   yAng:{round(imgAng_y,2)}   img_s:{round(imgPos_s,2)}")
         
         return(True)
-
-
-        
+     
     def readVectors(self):
         prevLED = -1
         currLED = 0
@@ -263,7 +303,7 @@ class webcam:
                 attempt = self.failedAttempts[currLED][-1]
 
                 if len(self.failedAttempts[currLED]) >= MAX_ATTEMPTS:
-                    self.finishedLEDs.append(currLED)
+                    if currLED not in self.finishedLEDs: self.finishedLEDs.append(currLED)
                     print("Abandoned ", end='')
                 else:
                     print("Failed    ", end='')
@@ -284,6 +324,9 @@ class webcam:
         return(self.ledData)
     
     def getData(self):
+        # imgAng_x = (self.ledData['xPix'] - self.img_thresh.shape[1]/2) / 668
+        # imgAng_y = (self.img_thresh.shape[0]/2 - self.ledData['yPix']) / 668 
+
         return(self.ledData)
     
     def getFails(self):
@@ -294,14 +337,13 @@ class webcam:
     #     imageio.mimsave(fileName, self.imagelist, fps=0.5)       
 
     def updateDisplay(self):
-        self.img_posOverLay = deepcopy(self.img)
-        self.img_points = np.zeros_like(self.img)
-
+        self.img_posOverLay = deepcopy(self.img_unDist)
+        # self.img_points = np.zeros_like(self.img)
         for ii in range(len(self.ledData['xPix'])):
             xPix = round(self.ledData['xPix'][ii])
             yPix = round(self.ledData['yPix'][ii])
             pltRad = round(self.ledData['size'][ii]/30)
-            cv2.circle( self.img_points, (xPix, yPix), pltRad, (0,0,255), 1)
+            # cv2.circle( self.img_points, (xPix, yPix), pltRad, (0,0,255), 1)
             
             crossLen = 4
             cv2.line( self.img_posOverLay, (xPix-crossLen, yPix), (xPix+crossLen, yPix), (0,0,255), 1)
@@ -311,8 +353,11 @@ class webcam:
         display_thresh = cv2.cvtColor(self.img_thresh, cv2.COLOR_GRAY2BGR)
         display_subtract = cv2.cvtColor(self.img_subtract, cv2.COLOR_GRAY2BGR)
 
-        cv2.imshow('Display', adjacentImages([[self.img_posOverLay, self.img_points], [display_subtract, display_thresh]]))
+        cv2.imshow('Display', adjacentImages([[self.img, self.img_posOverLay], [display_subtract, display_thresh]]))
 
+    def updateJustImg(self):
+        zeroImg = np.zeros_like(self.img)
+        cv2.imshow('Display', adjacentImages([[self.img, zeroImg], [zeroImg, zeroImg]]))
 
 # If this file is run as main, show video with center crosshair for camera calibration
 if __name__ == "__main__":

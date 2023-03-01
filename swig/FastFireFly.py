@@ -122,217 +122,323 @@ class SwigPyIterator(object):
 # Register SwigPyIterator in _FastFireFly:
 _FastFireFly.SwigPyIterator_swigregister(SwigPyIterator)
 
-class vectorDouble(object):
+class Vector_int(object):
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
 
     def iterator(self):
-        return _FastFireFly.vectorDouble_iterator(self)
+        return _FastFireFly.Vector_int_iterator(self)
     def __iter__(self):
         return self.iterator()
 
     def __nonzero__(self):
-        return _FastFireFly.vectorDouble___nonzero__(self)
+        return _FastFireFly.Vector_int___nonzero__(self)
 
     def __bool__(self):
-        return _FastFireFly.vectorDouble___bool__(self)
+        return _FastFireFly.Vector_int___bool__(self)
 
     def __len__(self):
-        return _FastFireFly.vectorDouble___len__(self)
+        return _FastFireFly.Vector_int___len__(self)
 
     def __getslice__(self, i, j):
-        return _FastFireFly.vectorDouble___getslice__(self, i, j)
+        return _FastFireFly.Vector_int___getslice__(self, i, j)
 
     def __setslice__(self, *args):
-        return _FastFireFly.vectorDouble___setslice__(self, *args)
+        return _FastFireFly.Vector_int___setslice__(self, *args)
 
     def __delslice__(self, i, j):
-        return _FastFireFly.vectorDouble___delslice__(self, i, j)
+        return _FastFireFly.Vector_int___delslice__(self, i, j)
 
     def __delitem__(self, *args):
-        return _FastFireFly.vectorDouble___delitem__(self, *args)
+        return _FastFireFly.Vector_int___delitem__(self, *args)
 
     def __getitem__(self, *args):
-        return _FastFireFly.vectorDouble___getitem__(self, *args)
+        return _FastFireFly.Vector_int___getitem__(self, *args)
 
     def __setitem__(self, *args):
-        return _FastFireFly.vectorDouble___setitem__(self, *args)
+        return _FastFireFly.Vector_int___setitem__(self, *args)
 
     def pop(self):
-        return _FastFireFly.vectorDouble_pop(self)
+        return _FastFireFly.Vector_int_pop(self)
 
     def append(self, x):
-        return _FastFireFly.vectorDouble_append(self, x)
+        return _FastFireFly.Vector_int_append(self, x)
 
     def empty(self):
-        return _FastFireFly.vectorDouble_empty(self)
+        return _FastFireFly.Vector_int_empty(self)
 
     def size(self):
-        return _FastFireFly.vectorDouble_size(self)
+        return _FastFireFly.Vector_int_size(self)
 
     def swap(self, v):
-        return _FastFireFly.vectorDouble_swap(self, v)
+        return _FastFireFly.Vector_int_swap(self, v)
 
     def begin(self):
-        return _FastFireFly.vectorDouble_begin(self)
+        return _FastFireFly.Vector_int_begin(self)
 
     def end(self):
-        return _FastFireFly.vectorDouble_end(self)
+        return _FastFireFly.Vector_int_end(self)
 
     def rbegin(self):
-        return _FastFireFly.vectorDouble_rbegin(self)
+        return _FastFireFly.Vector_int_rbegin(self)
 
     def rend(self):
-        return _FastFireFly.vectorDouble_rend(self)
+        return _FastFireFly.Vector_int_rend(self)
 
     def clear(self):
-        return _FastFireFly.vectorDouble_clear(self)
+        return _FastFireFly.Vector_int_clear(self)
 
     def get_allocator(self):
-        return _FastFireFly.vectorDouble_get_allocator(self)
+        return _FastFireFly.Vector_int_get_allocator(self)
 
     def pop_back(self):
-        return _FastFireFly.vectorDouble_pop_back(self)
+        return _FastFireFly.Vector_int_pop_back(self)
 
     def erase(self, *args):
-        return _FastFireFly.vectorDouble_erase(self, *args)
+        return _FastFireFly.Vector_int_erase(self, *args)
 
     def __init__(self, *args):
-        _FastFireFly.vectorDouble_swiginit(self, _FastFireFly.new_vectorDouble(*args))
+        _FastFireFly.Vector_int_swiginit(self, _FastFireFly.new_Vector_int(*args))
 
     def push_back(self, x):
-        return _FastFireFly.vectorDouble_push_back(self, x)
+        return _FastFireFly.Vector_int_push_back(self, x)
 
     def front(self):
-        return _FastFireFly.vectorDouble_front(self)
+        return _FastFireFly.Vector_int_front(self)
 
     def back(self):
-        return _FastFireFly.vectorDouble_back(self)
+        return _FastFireFly.Vector_int_back(self)
 
     def assign(self, n, x):
-        return _FastFireFly.vectorDouble_assign(self, n, x)
+        return _FastFireFly.Vector_int_assign(self, n, x)
 
     def resize(self, *args):
-        return _FastFireFly.vectorDouble_resize(self, *args)
+        return _FastFireFly.Vector_int_resize(self, *args)
 
     def insert(self, *args):
-        return _FastFireFly.vectorDouble_insert(self, *args)
+        return _FastFireFly.Vector_int_insert(self, *args)
 
     def reserve(self, n):
-        return _FastFireFly.vectorDouble_reserve(self, n)
+        return _FastFireFly.Vector_int_reserve(self, n)
 
     def capacity(self):
-        return _FastFireFly.vectorDouble_capacity(self)
-    __swig_destroy__ = _FastFireFly.delete_vectorDouble
+        return _FastFireFly.Vector_int_capacity(self)
+    __swig_destroy__ = _FastFireFly.delete_Vector_int
 
-# Register vectorDouble in _FastFireFly:
-_FastFireFly.vectorDouble_swigregister(vectorDouble)
+# Register Vector_int in _FastFireFly:
+_FastFireFly.Vector_int_swigregister(Vector_int)
 
-class vectorDoubleDouble(object):
+class Vector_double(object):
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
 
     def iterator(self):
-        return _FastFireFly.vectorDoubleDouble_iterator(self)
+        return _FastFireFly.Vector_double_iterator(self)
     def __iter__(self):
         return self.iterator()
 
     def __nonzero__(self):
-        return _FastFireFly.vectorDoubleDouble___nonzero__(self)
+        return _FastFireFly.Vector_double___nonzero__(self)
 
     def __bool__(self):
-        return _FastFireFly.vectorDoubleDouble___bool__(self)
+        return _FastFireFly.Vector_double___bool__(self)
 
     def __len__(self):
-        return _FastFireFly.vectorDoubleDouble___len__(self)
+        return _FastFireFly.Vector_double___len__(self)
 
     def __getslice__(self, i, j):
-        return _FastFireFly.vectorDoubleDouble___getslice__(self, i, j)
+        return _FastFireFly.Vector_double___getslice__(self, i, j)
 
     def __setslice__(self, *args):
-        return _FastFireFly.vectorDoubleDouble___setslice__(self, *args)
+        return _FastFireFly.Vector_double___setslice__(self, *args)
 
     def __delslice__(self, i, j):
-        return _FastFireFly.vectorDoubleDouble___delslice__(self, i, j)
+        return _FastFireFly.Vector_double___delslice__(self, i, j)
 
     def __delitem__(self, *args):
-        return _FastFireFly.vectorDoubleDouble___delitem__(self, *args)
+        return _FastFireFly.Vector_double___delitem__(self, *args)
 
     def __getitem__(self, *args):
-        return _FastFireFly.vectorDoubleDouble___getitem__(self, *args)
+        return _FastFireFly.Vector_double___getitem__(self, *args)
 
     def __setitem__(self, *args):
-        return _FastFireFly.vectorDoubleDouble___setitem__(self, *args)
+        return _FastFireFly.Vector_double___setitem__(self, *args)
 
     def pop(self):
-        return _FastFireFly.vectorDoubleDouble_pop(self)
+        return _FastFireFly.Vector_double_pop(self)
 
     def append(self, x):
-        return _FastFireFly.vectorDoubleDouble_append(self, x)
+        return _FastFireFly.Vector_double_append(self, x)
 
     def empty(self):
-        return _FastFireFly.vectorDoubleDouble_empty(self)
+        return _FastFireFly.Vector_double_empty(self)
 
     def size(self):
-        return _FastFireFly.vectorDoubleDouble_size(self)
+        return _FastFireFly.Vector_double_size(self)
 
     def swap(self, v):
-        return _FastFireFly.vectorDoubleDouble_swap(self, v)
+        return _FastFireFly.Vector_double_swap(self, v)
 
     def begin(self):
-        return _FastFireFly.vectorDoubleDouble_begin(self)
+        return _FastFireFly.Vector_double_begin(self)
 
     def end(self):
-        return _FastFireFly.vectorDoubleDouble_end(self)
+        return _FastFireFly.Vector_double_end(self)
 
     def rbegin(self):
-        return _FastFireFly.vectorDoubleDouble_rbegin(self)
+        return _FastFireFly.Vector_double_rbegin(self)
 
     def rend(self):
-        return _FastFireFly.vectorDoubleDouble_rend(self)
+        return _FastFireFly.Vector_double_rend(self)
 
     def clear(self):
-        return _FastFireFly.vectorDoubleDouble_clear(self)
+        return _FastFireFly.Vector_double_clear(self)
 
     def get_allocator(self):
-        return _FastFireFly.vectorDoubleDouble_get_allocator(self)
+        return _FastFireFly.Vector_double_get_allocator(self)
 
     def pop_back(self):
-        return _FastFireFly.vectorDoubleDouble_pop_back(self)
+        return _FastFireFly.Vector_double_pop_back(self)
 
     def erase(self, *args):
-        return _FastFireFly.vectorDoubleDouble_erase(self, *args)
+        return _FastFireFly.Vector_double_erase(self, *args)
 
     def __init__(self, *args):
-        _FastFireFly.vectorDoubleDouble_swiginit(self, _FastFireFly.new_vectorDoubleDouble(*args))
+        _FastFireFly.Vector_double_swiginit(self, _FastFireFly.new_Vector_double(*args))
 
     def push_back(self, x):
-        return _FastFireFly.vectorDoubleDouble_push_back(self, x)
+        return _FastFireFly.Vector_double_push_back(self, x)
 
     def front(self):
-        return _FastFireFly.vectorDoubleDouble_front(self)
+        return _FastFireFly.Vector_double_front(self)
 
     def back(self):
-        return _FastFireFly.vectorDoubleDouble_back(self)
+        return _FastFireFly.Vector_double_back(self)
 
     def assign(self, n, x):
-        return _FastFireFly.vectorDoubleDouble_assign(self, n, x)
+        return _FastFireFly.Vector_double_assign(self, n, x)
 
     def resize(self, *args):
-        return _FastFireFly.vectorDoubleDouble_resize(self, *args)
+        return _FastFireFly.Vector_double_resize(self, *args)
 
     def insert(self, *args):
-        return _FastFireFly.vectorDoubleDouble_insert(self, *args)
+        return _FastFireFly.Vector_double_insert(self, *args)
 
     def reserve(self, n):
-        return _FastFireFly.vectorDoubleDouble_reserve(self, n)
+        return _FastFireFly.Vector_double_reserve(self, n)
 
     def capacity(self):
-        return _FastFireFly.vectorDoubleDouble_capacity(self)
-    __swig_destroy__ = _FastFireFly.delete_vectorDoubleDouble
+        return _FastFireFly.Vector_double_capacity(self)
+    __swig_destroy__ = _FastFireFly.delete_Vector_double
 
-# Register vectorDoubleDouble in _FastFireFly:
-_FastFireFly.vectorDoubleDouble_swigregister(vectorDoubleDouble)
+# Register Vector_double in _FastFireFly:
+_FastFireFly.Vector_double_swigregister(Vector_double)
+
+class Vector_doubleDouble(object):
+    thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
+    __repr__ = _swig_repr
+
+    def iterator(self):
+        return _FastFireFly.Vector_doubleDouble_iterator(self)
+    def __iter__(self):
+        return self.iterator()
+
+    def __nonzero__(self):
+        return _FastFireFly.Vector_doubleDouble___nonzero__(self)
+
+    def __bool__(self):
+        return _FastFireFly.Vector_doubleDouble___bool__(self)
+
+    def __len__(self):
+        return _FastFireFly.Vector_doubleDouble___len__(self)
+
+    def __getslice__(self, i, j):
+        return _FastFireFly.Vector_doubleDouble___getslice__(self, i, j)
+
+    def __setslice__(self, *args):
+        return _FastFireFly.Vector_doubleDouble___setslice__(self, *args)
+
+    def __delslice__(self, i, j):
+        return _FastFireFly.Vector_doubleDouble___delslice__(self, i, j)
+
+    def __delitem__(self, *args):
+        return _FastFireFly.Vector_doubleDouble___delitem__(self, *args)
+
+    def __getitem__(self, *args):
+        return _FastFireFly.Vector_doubleDouble___getitem__(self, *args)
+
+    def __setitem__(self, *args):
+        return _FastFireFly.Vector_doubleDouble___setitem__(self, *args)
+
+    def pop(self):
+        return _FastFireFly.Vector_doubleDouble_pop(self)
+
+    def append(self, x):
+        return _FastFireFly.Vector_doubleDouble_append(self, x)
+
+    def empty(self):
+        return _FastFireFly.Vector_doubleDouble_empty(self)
+
+    def size(self):
+        return _FastFireFly.Vector_doubleDouble_size(self)
+
+    def swap(self, v):
+        return _FastFireFly.Vector_doubleDouble_swap(self, v)
+
+    def begin(self):
+        return _FastFireFly.Vector_doubleDouble_begin(self)
+
+    def end(self):
+        return _FastFireFly.Vector_doubleDouble_end(self)
+
+    def rbegin(self):
+        return _FastFireFly.Vector_doubleDouble_rbegin(self)
+
+    def rend(self):
+        return _FastFireFly.Vector_doubleDouble_rend(self)
+
+    def clear(self):
+        return _FastFireFly.Vector_doubleDouble_clear(self)
+
+    def get_allocator(self):
+        return _FastFireFly.Vector_doubleDouble_get_allocator(self)
+
+    def pop_back(self):
+        return _FastFireFly.Vector_doubleDouble_pop_back(self)
+
+    def erase(self, *args):
+        return _FastFireFly.Vector_doubleDouble_erase(self, *args)
+
+    def __init__(self, *args):
+        _FastFireFly.Vector_doubleDouble_swiginit(self, _FastFireFly.new_Vector_doubleDouble(*args))
+
+    def push_back(self, x):
+        return _FastFireFly.Vector_doubleDouble_push_back(self, x)
+
+    def front(self):
+        return _FastFireFly.Vector_doubleDouble_front(self)
+
+    def back(self):
+        return _FastFireFly.Vector_doubleDouble_back(self)
+
+    def assign(self, n, x):
+        return _FastFireFly.Vector_doubleDouble_assign(self, n, x)
+
+    def resize(self, *args):
+        return _FastFireFly.Vector_doubleDouble_resize(self, *args)
+
+    def insert(self, *args):
+        return _FastFireFly.Vector_doubleDouble_insert(self, *args)
+
+    def reserve(self, n):
+        return _FastFireFly.Vector_doubleDouble_reserve(self, n)
+
+    def capacity(self):
+        return _FastFireFly.Vector_doubleDouble_capacity(self)
+    __swig_destroy__ = _FastFireFly.delete_Vector_doubleDouble
+
+# Register Vector_doubleDouble in _FastFireFly:
+_FastFireFly.Vector_doubleDouble_swigregister(Vector_doubleDouble)
 
 class transformationSet(object):
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
@@ -361,11 +467,14 @@ class ledLocalizationFast(object):
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
 
-    def __init__(self, _LED_X, _LED_Y, _LED_Z, _pos_x=0, _pos_y=-500, _pos_z=1000):
-        _FastFireFly.ledLocalizationFast_swiginit(self, _FastFireFly.new_ledLocalizationFast(_LED_X, _LED_Y, _LED_Z, _pos_x, _pos_y, _pos_z))
+    def __init__(self, *args):
+        _FastFireFly.ledLocalizationFast_swiginit(self, _FastFireFly.new_ledLocalizationFast(*args))
 
-    def fitPositionToVectors(self, vect_X, vect_Y, vect_Z, _Vect_S, _LED_Indices):
-        return _FastFireFly.ledLocalizationFast_fitPositionToVectors(self, vect_X, vect_Y, vect_Z, _Vect_S, _LED_Indices)
+    def fitData_imageCentric(self, _ang_set, _LED_indices, randomizeCount):
+        return _FastFireFly.ledLocalizationFast_fitData_imageCentric(self, _ang_set, _LED_indices, randomizeCount)
+
+    def fitData_3D(self, _ang_set, _LED_indices, randomizeCount):
+        return _FastFireFly.ledLocalizationFast_fitData_3D(self, _ang_set, _LED_indices, randomizeCount)
 
     def getPosition(self):
         return _FastFireFly.ledLocalizationFast_getPosition(self)
@@ -378,6 +487,12 @@ class ledLocalizationFast(object):
 
     def getRandFactor(self):
         return _FastFireFly.ledLocalizationFast_getRandFactor(self)
+
+    def getTestAngles(self):
+        return _FastFireFly.ledLocalizationFast_getTestAngles(self)
+
+    def get_ang_line_set(self):
+        return _FastFireFly.ledLocalizationFast_get_ang_line_set(self)
     __swig_destroy__ = _FastFireFly.delete_ledLocalizationFast
 
 # Register ledLocalizationFast in _FastFireFly:

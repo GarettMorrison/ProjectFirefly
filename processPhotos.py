@@ -40,14 +40,15 @@ while True:
     if k==27:    # Esc key to stop
         exit()
     elif k==-1:  # Normally -1 returned,so don't print it
-        webcamComms.readImage()
-        webcamComms.updateDisplay()
+        webcamComms.takePhoto()
+        webcamComms.updateJustImg()
 
     elif k != 32: # If char is not space bar
         print(k)
 
     else: # Char is space bar, take data pt
         webcamComms.clearData()
+        startImg = webcamComms.readImage()
         outDict = webcamComms.readVectors()
 
 
@@ -65,6 +66,9 @@ while True:
         outFile = open("data/"+fileName, 'wb')
         pkl.dump(outDict, outFile)
         outFile.close()
+
+        # Save image
+        cv2.imwrite(f"data/photo_{fileInd}.png", startImg)
 
         print(f"\nFound {len(outDict['index'])}/{len(LED_X)} positions")
         print(f"Located: {np.sort(outDict['index'])}\n")

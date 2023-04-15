@@ -88,6 +88,24 @@ def plotJustLEDPos(LED_X, LED_Y, LED_Z):
 
 
 
+def plotPosTransform(inMotion, plotRad=10):
+    plotSet = [[0], [0], [0]]
+    for ii in range(7):
+        plotSet[0].append(plotRad*sin(ii*m.pi*2/6))
+        plotSet[1].append(plotRad*cos(ii*m.pi*2/6))
+        plotSet[2].append(0)
+
+    plotSet = completeMotion(np.array(plotSet), inMotion)
+    
+    if noColorOverride:
+        ax.plot(plotSet[1], plotSet[0], plotSet[2])
+    else:
+        ax.plot(plotSet[1], plotSet[0], plotSet[2], color=plotColor)
+
+
+
+
+
 def showPlot():
     global ax
     ax.set_xlabel('Z')

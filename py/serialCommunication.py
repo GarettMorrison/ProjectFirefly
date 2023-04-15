@@ -11,6 +11,8 @@ import pickle as pkl
 
 import serial.tools.list_ports
 
+# fooPort = "COM3"
+fooPort = "COM6"
 def listPorts():
     ports = serial.tools.list_ports.comports()
     print("Comports Available:")
@@ -23,38 +25,51 @@ class roverSerial:
         print('Connecting to ports')
         # ser = serial.Serial('COM6', baudrate=9600, timeout=0, parity=serial.PARITY_EVEN, stopbits=1)
 
-        self.ser = serial.Serial('COM3', baudrate=4800, timeout=2)
-        time.sleep(1)
+        self.ser = serial.Serial(fooPort, baudrate=9600, timeout=0.5)
+        time.sleep(2)
 
-    ledSetAttempts = []
-    def setLED(self, pos, vals):
-        numSet = [pos] + vals
+    def setLED(self, pos, val):
+        numSet = [1, pos, val, 0]
+        self.sendBytes(numSet)
+
+    def doMotion(self, direction, duration):
+        if type(direction) == str:
+            if direction == 'f' or direction == 'F': direction = 1
+            elif direction == 'b' or direction == 'B': direction = 2
+            elif direction == 'r' or direction == 'R': direction = 4
+            elif direction == 'l' or direction == 'L': direction = 8
+
+        numSet = [2, direction, m.floor(duration/256), duration%256]
+        self.sendBytes(numSet)
+
+        
+    def sendBytes(self, numSet):
         checkSum_sent = sum(numSet)%256
         byteSend = bytes(numSet + [checkSum_sent])
-        
-        # print(f"setting {pos} to {vals}, sending {byteSend}")
+
+        # self.ser.reset_input_buffer()
 
         setAttempts = 0
         while True:
             setAttempts += 1
             self.ser.write(byteSend)
-
+            self.ser.flush()
+            print(f"\nSending {str(numSet).rjust(15, ' ')} -> {' '.join('{:02x}'.format(x) for x in byteSend)}")
+            
             checkSum_read = self.ser.read()
             # print(f"read:{checkSum_read}")
             if(len(checkSum_read) == 0): 
-                # print(f"   len(checkSum_read) == 0, checkSum={checkSum_read}")  
+                print(f"   len(checkSum_read) == 0, checkSum={checkSum_read}")  
                 continue
 
             checkSum_read = int.from_bytes(checkSum_read, 'big')
 
             if checkSum_read == checkSum_sent:
-                # print(f"   {checkSum_read} == {checkSum_sent}")
-
-                # ledSetAttempts.append(setAttempts)
-                # if len(ledSetAttempts) > 100: del ledSetAttempts[0]
-                # print(f"ledSetAttempts average:{ sum(ledSetAttempts) / len(ledSetAttempts) }")
                 break
             else:
-                # print(f"   {checkSum_read} != {checkSum_sent}")
-                self.ser.reset_input_buffer()
+                print(f"   {checkSum_read} != {checkSum_sent}")
+            if self.ser.in_waiting > 0: print(f"Dumped {' '.join('{:02x}'.format(x) for x in self.ser.read(self.ser.in_waiting))}")
 
+# listPorts()
+if __name__ == "__main__":
+    listPorts()

@@ -10,12 +10,11 @@ from py.positionFuncs import *
 import swig.FastFireFly as FFF
 
 
+# DO_PLOT_3D = True
 DO_PLOT_3D = True
-# DO_PLOT_3D = False
 if DO_PLOT_3D: import py.plot3D as plot3D
 
-DO_PLOT_2D = True
-DO_PLOT_2D = False
+DO_PLOT_2D = not DO_PLOT_3D
 if DO_PLOT_2D: 
     import matplotlib.pyplot as plt
     import random
@@ -25,13 +24,17 @@ import colorsys
 #     return tuple(round(i * 255) for i in colorsys.hsv_to_rgb(h,s,v))
 
 DO_FILEOUT = True
-
+CHECK_DUR =0.5
 
 
 # LED Positions by index
-LED_X = np.array( [ -112.5833025,-91.92388155,-65,-32.5,-45.96194078,-56.29165125,56.29165125,45.96194078,32.5,65,91.92388155,112.5833025,56.29165125,45.96194078,32.5,-32.5,-45.96194078,-56.29165125 ] )
-LED_Z = np.array( [ 65, 91.92388155, 112.5833025, 112.5833025, 91.92388155, 65, 65, 91.92388155, 112.5833025, 112.5833025, 91.92388155, 65, 65, 91.92388155, 112.5833025, 112.5833025, 91.92388155, 65 ] )
-LED_Y = np.array( [ 0, 0, 0, -56.29165125, -79.60841664, -97.5, -97.5, -79.60841664, -56.29165125, 0, 0, 0, 97.5, 79.60841664, 56.29165125, 56.29165125, 79.60841664, 97.5 ] )
+# LED_X = np.array( [ -112.5833025,-91.92388155,-65,-32.5,-45.96194078,-56.29165125,56.29165125,45.96194078,32.5,65,91.92388155,112.5833025,56.29165125,45.96194078,32.5,-32.5,-45.96194078,-56.29165125 ] )
+# LED_Z = np.array( [ 65, 91.92388155, 112.5833025, 112.5833025, 91.92388155, 65, 65, 91.92388155, 112.5833025, 112.5833025, 91.92388155, 65, 65, 91.92388155, 112.5833025, 112.5833025, 91.92388155, 65 ] )
+# LED_Y = np.array( [ 0, 0, 0, -56.29165125, -79.60841664, -97.5, -97.5, -79.60841664, -56.29165125, 0, 0, 0, 97.5, 79.60841664, 56.29165125, 56.29165125, 79.60841664, 97.5 ] )
+LED_X = np.array( [ -56.29165125, -45.96194078, -32.5, -16.25, -22.98097039, -28.14582562, 28.14582562, 22.98097039, 16.25, 32.5, 45.96194078, 56.29165125, 28.14582562, 22.98097039, 16.25, -16.25, -22.98097039, -28.14582562 ] )
+LED_Z = np.array( [ 32.5, 45.96194078, 56.29165125, 56.29165125, 45.96194078, 32.5, 32.5, 45.96194078, 56.29165125, 56.29165125, 45.96194078, 32.5, 32.5, 45.96194078, 56.29165125, 56.29165125, 45.96194078, 32.5 ] )
+LED_Y = np.array( [ 0, 0, 0, -28.14582562, -39.80420832, -48.75, -48.75, -39.80420832, -28.14582562, 0, 0, 0, 48.75, 39.80420832, 28.14582562, 28.14582562, 39.80420832, 48.75 ] )
+
 
 
 ptCount = len(LED_X)
@@ -59,12 +62,9 @@ writePoints.close()
 
 
 plotColSet = ['blue', 'orange', 'green', 'red', 'purple', 'brown', 'pink', 'gray', 'olive', 'cyan']
-runIndex = -1
 
-
-def testRun(dataDict):
+def testRun(dataDict, fileIndex):
     global plotColSet, runIndex, prevMotion, defaultPosition
-    runIndex += 1
     ptAngs = np.array([dataDict['xAng'], dataDict['yAng']], dtype=np.double)
     # ptAngs[1] -= m.radians(30)
     zAngle = ptAngs[0]
@@ -73,6 +73,7 @@ def testRun(dataDict):
     if ptCount == 0:
         print("NO DATA")
         return
+    
     ptIndex = np.array(dataDict['index'], dtype=np.uint32)
 
     global plotColor
@@ -145,7 +146,7 @@ def testRun(dataDict):
     if DO_FILEOUT:
         writePoints = open('data/PositionLog.csv', 'a')
         # writePoints.write(f"{writeIndex},{motion_best[1]},{motion_best[0]},{motion_best[2]},{motion_best[4]},{motion_best[3]},{motion_best[5]},\n")
-        writePoints.write(f"{runIndex},{motion_best[0]},{motion_best[1]},{motion_best[2]},{motion_best[3]},{motion_best[4]},{motion_best[5]},\n")
+        writePoints.write(f"{fileIndex},{motion_best[0]},{motion_best[1]},{motion_best[2]},{motion_best[3]},{motion_best[4]},{motion_best[5]},{dataDict['motionSel']},{dataDict['motionDur']},\n")
         writePoints.close()
 
     # Print Run info
@@ -167,19 +168,21 @@ while True:
     # Load data files
     for fileName in existingFiles:
         if not '.pkl' in fileName: continue
+        if not 'run_' in fileName: continue
         if fileName in loadedFiles: continue
 
         loadedFiles.append(fileName)
 
         # print(loadedFiles)
 
-        print(f"NEW DATA: {fileName.split('.')[0]}")
+        print(f"\nNEW DATA: {fileName.split('.')[0]}")
+        fileIndex = int(fileName.split('.')[0].split('_')[1])
 
         inFile = open("data/"+fileName, 'rb')
         readDict = pkl.load(inFile)
         inFile.close()
         
-        testRun(readDict)
+        testRun(readDict, fileIndex)
     
     if DO_PLOT_2D:
         plt.title("Position of LEDs in Image")
@@ -195,4 +198,4 @@ while True:
         plt.title("LED Positions in 3D Space")
         plot3D.showPlot()
     
-    plt.pause(0.1)
+    plt.pause(CHECK_DUR)

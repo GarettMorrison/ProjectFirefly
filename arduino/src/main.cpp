@@ -2,12 +2,64 @@
 
 #include "config.h"
 
-// #include <FastLED.h>
-// #define LED_TYPE    WS2811
-// #define LED_PIN    6
-// #define NUM_LEDS    18
-// #define COLOR_ORDER GRB
-// CRGB leds[NUM_LEDS];
+// LED Strip
+#include <FastLED.h>
+#define LED_TYPE    WS2811
+#define LED_PIN    6
+#define NUM_LEDS    18
+#define COLOR_ORDER GRB
+CRGB leds[NUM_LEDS];
+
+
+// VL53L0X
+
+#include "VL53L0X.h"
+#include <Wire.h>
+const size_t VL53L0X_count = 3; // How many sensors
+const uint8_t VL53L0X_xShut[] = {11, 12, 13}; // VL53L0X shutdown pins (for setting addresses individually)
+const int VL53L0X_address[] = {0x30, 0x31, 0x32}; // New addresses to set sensors to
+VL53L0X  VL53L0X_lox[3]; // Library sensor object
+uint16_t VL53L0X_data[3]; // Library sensor object
+
+// VL53L0X Setup
+void VL53L0X_config(){
+  // Iterate through sensors and set low
+  for(size_t ii=0; ii<VL53L0X_count; ii++){
+    // VL53L0X_lox[ii] = Adafruit_VL53L0X();
+    pinMode(VL53L0X_xShut[ii], OUTPUT);
+    digitalWrite(VL53L0X_xShut[ii], LOW); // Set shutdown pin LOW to disable
+  }
+  delay(10); // Pause to let VL53L0X start up
+
+  // // Reset all sensors by setting to low for 10 mS and then turning back on
+  // for(size_t ii=0; ii<VL53L0X_count; ii++) digitalWrite(VL53L0X_xShut[ii], LOW);
+  // delay(10);
+
+  // Activate sensors individually and turn on
+  for(size_t ii=0; ii<VL53L0X_count; ii++){
+    digitalWrite(VL53L0X_xShut[ii], HIGH); // Pull shutdown pin HIGH to enable sensor
+    delay(10); // Pause to let VL53L0X wake up
+
+    // Set address of VL53L0X sensor
+    VL53L0X_lox[ii].setAddress(VL53L0X_address[ii]);
+  }
+
+  
+  delay(10);
+  // Initialize LV53L0X
+  for(size_t ii=0; ii<VL53L0X_count; ii++){
+    VL53L0X_lox[ii].init();
+    VL53L0X_lox[ii].setTimeout(500);
+  }
+
+}
+
+void readSensors(){
+  // Iterate through sensors
+  for(size_t ii=0; ii<VL53L0X_count; ii++){
+    VL53L0X_data[ii] = VL53L0X_lox[ii].readRangeSingleMillimeters();
+  }
+}
 
 
 // Motors
@@ -33,74 +85,77 @@ void motorConfig(){
   digitalWrite(M2B, LOW);
 }
 
+void roverDrive(uint8_t driveSel, uint16_t runDur){
+  uint32_t startTime = millis();
 
-// VL53L0X
+  uint8_t driveSel_1 = 0;
+  uint8_t driveSel_2 = 0;
 
-#include "Adafruit_VL53L0X.h"
-#include <Wire.h>
-const size_t VL53L0x_count = 2; // How many sensors
-const uint8_t VL53L0x_xShut[] = {11, 12, 13}; // VL53L0X shutdown pins (for setting addresses individually)
-const int VL53L0x_address[] = {0x30, 0x31, 0x32}; // New addresses to set sensors to
-Adafruit_VL53L0X VL53L0x_lox[2]; // Library sensor object
-// Adafruit_VL53L0X lox_1;
-// Adafruit_VL53L0X lox_2;
-// Adafruit_VL53L0X lox_3;
+  switch (driveSel)
+  {
+  // Go Forward
+  case 1:
+    driveSel_1 = M1B;
+    driveSel_2 = M2B;
+    break;
+    
+  // Go Backward
+  case 2:
+    driveSel_1 = M1A;
+    driveSel_2 = M2A;
+    break;
+    
+  // Turn Left
+  case 4:
+    driveSel_1 = M1A;
+    driveSel_2 = M2B;
+    break;
 
-// VL53L0X Setup
-void VL53L0X_config(){
-  Serial.println("\nSetting up VL53L0X");
-
-  // VL53L0x_lox[1] = &lox_1;
-  // VL53L0x_lox[2] = &lox_2;
-  // VL53L0x_lox[3] = &lox_3;
-
-  // Iterate through sensors and set low
-  for(size_t ii=0; ii<VL53L0x_count; ii++){
-    // VL53L0x_lox[ii] = Adafruit_VL53L0X();
-    pinMode(VL53L0x_xShut[ii], OUTPUT);
-    digitalWrite(VL53L0x_xShut[ii], LOW); // Set shutdown pin LOW to disable
+  // Turn Left
+  case 8:
+    driveSel_1 = M1B;
+    driveSel_2 = M2A;
+    break;
+  
+  default: // Default to forward
+    driveSel_1 = M1A;
+    driveSel_2 = M2A;
+    break;
   }
-  delay(10); // Pause to let VL53L0X start up
 
-  // // Reset all sensors by setting to low for 10 mS and then turning back on
-  // for(size_t ii=0; ii<VL53L0x_count; ii++) digitalWrite(VL53L0x_xShut[ii], LOW);
-  // delay(10);
+  uint8_t currIter = 0;
 
-  Serial.println("AAAAAAA");
-  // Activate sensors individually and turn on
-  for(size_t ii=0; ii<VL53L0x_count; ii++){
-    digitalWrite(VL53L0x_xShut[ii], HIGH); // Pull shutdown pin HIGH to enable sensor
-    delay(10); // Pause to let VL53L0X wake up
+  digitalWrite(driveSel_1, HIGH);
+  digitalWrite(driveSel_2, HIGH);
 
-    // Begin VL53L0X sensor and check if online
-    if(VL53L0x_lox[ii].begin(VL53L0x_address[ii], false, &Wire, Adafruit_VL53L0X::VL53L0X_SENSE_DEFAULT)){
-    // if( VL53L0x_lox[ii].begin(VL53L0x_address[ii], false, &Wire, Adafruit_VL53L0X::VL53L0X_SENSE_DEFAULT) ){
-      Serial.print("VL53L0x_lox[");
-      Serial.print(ii);
-      Serial.print("] Success at ");
-      Serial.println(VL53L0x_address[ii]);
+  while(true){
+    // Check time 
+    uint32_t currTime = millis();
+    if(currTime - startTime > runDur) break;
+
+    // // Detect collision
+    // readSensors();
+    // for(size_t ii=0; ii<VL53L0X_count; ii++){
+    //   if(VL53L0X_data[ii] > 0) break;
+    // }
+
+    // Do PWM
+    if(currIter%2 == 1){
+      digitalWrite(driveSel_1, LOW);
+      digitalWrite(driveSel_2, LOW);
     }
     else{
-      Serial.print("VL53L0x_lox[");
-      Serial.print(ii);
-      Serial.print("] Failure at ");
-      Serial.println(VL53L0x_address[ii]);
+      digitalWrite(driveSel_1, HIGH);
+      digitalWrite(driveSel_2, HIGH);
     }
+
+    currIter += 1;
+    if(currIter >= 5) currIter = 0;
   }
 
+  digitalWrite(driveSel_1, LOW);
+  digitalWrite(driveSel_2, LOW);
 }
-
-void readSensors(){
-  // Iterate through sensors
-  for(size_t ii=0; ii<VL53L0x_count; ii++){
-    int measuredRange = VL53L0x_lox[ii].readRange();
-    Serial.print(ii);
-    Serial.print(": ");
-    Serial.println(measuredRange);
-  }
-
-}
-
 
 
 
@@ -130,11 +185,11 @@ void setup() {
 
   if(USE_BLUETOOTH_SERIAL) bluetoothSerialConfig(); // if using bluetooth serial, config HC06 Module
 
-  // Init LED pins as outputs (Pins 2->9)
-  for(size_t ii=2; ii<10; ii++){
-    pinMode(ii, OUTPUT);
-    digitalWrite(ii, LOW);
-  }
+  // // Init LED pins as outputs (Pins 2->9)
+  // for(size_t ii=2; ii<10; ii++){
+  //   pinMode(ii, OUTPUT);
+  //   digitalWrite(ii, LOW);
+  // }
 
   VL53L0X_config(); // Sensor init
 
@@ -143,7 +198,7 @@ void setup() {
     delay(1);
   }
   
-  // FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip ); // Set up LED strip
+  FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip ); // Set up LED strip
 }
 
 uint8_t led_position = 0;
@@ -155,65 +210,49 @@ uint8_t led_position = 0;
 //   return(outVal);
 // }
 
-uint8_t messageBytes[4];
+uint8_t messageBytes[5];
 uint8_t checkSum;
 uint8_t checkSumRead;
 
 void loop() {
-  // VL53L0X_RangingMeasurementData_t measure;
-    
-  // Serial.print("Reading a measurement... ");
-  // lox.rangingTest(&measure, false); // pass in 'true' to get debug data printout!
 
-  // if (measure.RangeStatus != 4) {  // phase failures have incorrect data
-  //   Serial.print("Distance (mm): "); Serial.println(measure.RangeMilliMeter);
-  // } else {
-  //   Serial.println(" out of range ");
-  // }
-    
-  // delay(100);
-
-
-
-
-
-
-  readSensors();
-  Serial.println("");
-  while(Serial.available() > 0){ Serial.write(Serial.read()); }
-  Serial.println("");
-  delay(500);
-
-
-
-  // while(Serial.available() >= 5){
-  //   checkSum = 0;
-  //   for(size_t ii=0; ii<4; ii++){
-  //     messageBytes[ii] = Serial.read();
-  //     checkSum += messageBytes[ii];
-  //   }
-  //   checkSumRead = Serial.read();
+  // Read all Serial commands
+  while(Serial.available() >= 5){
+    checkSum = 0;
+    for(size_t ii=0; ii<4; ii++){
+      messageBytes[ii] = Serial.read();
+      checkSum += messageBytes[ii];
+    }
+    checkSumRead = Serial.read();
     
 
-  //   if(checkSum == checkSumRead){
-  //     led_position = messageBytes[0];
-  //     leds[led_position].r = messageBytes[1];
-  //     leds[led_position].g = messageBytes[2];
-  //     leds[led_position].b = messageBytes[3];
-
-  //     FastLED.show(); // apply the function on led strip
-  //   }
-  //   else{
-  //     delay(1);
-  //     while (Serial.available()) Serial.read();
-  //   }
+    if(checkSum == checkSumRead){
+        // Turn on LED
+      if(messageBytes[0] == 1){
+          led_position = messageBytes[1];
+          leds[led_position].r = messageBytes[2];
+          leds[led_position].g = messageBytes[2];
+          leds[led_position].b = messageBytes[2];
+          FastLED.show(); // apply the function on led strip
+      }
+        // Drive
+      else if(messageBytes[0] == 2){
+        // Serial.write(0xFFFFFF);
+        roverDrive(messageBytes[1], messageBytes[2]*256+messageBytes[3]);
+      }
+      // else{
+      //   Serial.write(0xAAAAAA);
+      // }
+    }
+    else{
+      delay(1);
+      while (Serial.available() > 0) Serial.read();
+    }
     
-  //   Serial.write(checkSum);    
-  // }
+    Serial.write(checkSum);
+    // for(size_t ii=0; ii<4; ii++) Serial.write( messageBytes[ii] );
+    Serial.flush();
+  }
   
-
-
-
-
   // delay(10);
 }

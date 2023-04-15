@@ -87,6 +87,43 @@ def undoMotion(inPts, motion):
     
     return(ptSet)
 
+
+
+
+def transformationMatrix(motion):
+    A = motion[3]
+    B = motion[4]
+    C = motion[5]
+
+    return(np.array([        
+        [ cos(B)*cos(C), sin(A)*sin(B)*cos(C)-cos(A)*sin(C), cos(A)*sin(B)*cos(C)+sin(A)*sin(C), motion[0] ],
+        [ cos(B)*sin(C), sin(A)*sin(B)*sin(C) +cos(A)*cos(C), cos(A)*sin(B)*sin(C) -sin(A)*cos(C), motion[1] ],
+        [ -sin(B), sin(A)*cos(B), cos(A)*cos(B), motion[2] ],
+        [0, 0, 0, 1]
+    ]))
+
+
+def addMotions(motion1, motion2, transpose1 = False):
+    if not transpose1: outMatrix = np.matmul( transformationMatrix(motion1), transformationMatrix(motion2) )
+    else: outMatrix = np.matmul( np.linalg.inv(transformationMatrix(motion1)), transformationMatrix(motion2) )
+    return(outMatrix)
+
+
+def getMotionBetween(motion1, motion2):
+    outMat = np.matmul( np.linalg.inv(transformationMatrix(motion1)), transformationMatrix(motion2) )
+    
+    outMotion = [
+        outMat[0][3],
+        outMat[1][3],
+        outMat[2][3],
+        np.arctan2(outMat[2][1], outMat[2][2]),
+        np.arctan2(-outMat[2][0], m.sqrt(pow(outMat[3][1], 2) + pow(outMat[2][2], 2))),
+        np.arctan2(outMat[1][0], outMat[0][0]),
+    ]
+
+    return(outMotion)
+
+
 def magnitude(inVals):
     return(m.sqrt(sum(pow(inVals,2))))
 

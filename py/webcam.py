@@ -7,6 +7,7 @@ import imageio
 from copy import deepcopy
 from py.serialCommunication import listPorts, roverSerial
 import random
+import statistics as st
 
 
 TRESH_MIN = 120
@@ -15,7 +16,7 @@ LED_BRIGHTNESS_MIN = 5
 LED_BRIGHTNESS_MAX = 255
 LED_BRIGHTNESS_DEFAULT = 150
 
-SPOT_SIZE_MIN = 60
+SPOT_SIZE_MIN = 30
 SPOT_SIZE_MAX = 130
 
 MAX_ATTEMPTS = 6
@@ -76,7 +77,7 @@ class webcam:
         
 
         # Setting up cam
-        self.cam = cv2.VideoCapture(0)
+        self.cam = cv2.VideoCapture(2)
         result, self.img = self.cam.read()
         self.img_gray = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
         self.lastImgTime = time.time()
@@ -87,9 +88,20 @@ class webcam:
         self.img_posOverLay = np.zeros_like(self.img)
         self.img_subtract = np.zeros_like(self.img)
         self.img_points = np.zeros_like(self.img)
+        self.img_dataPts = np.zeros_like(self.img)
         
         self.img_thresh = np.zeros_like(self.img_gray)
         self.img_subtract = np.zeros_like(self.img_gray)
+
+        self.outputDimensions = (2*self.img.shape[1], 2*self.img.shape[0])
+        self.vid_display = cv2.VideoWriter(f"data/vid/{0}_fill.avi", cv2.VideoWriter_fourcc(*'XVID'), 10, self.outputDimensions, True)
+        self.vid_index = 1
+
+        # for ii in range(100): self.vid_display.write(self.img)
+        # self.vid_display.release()
+        # exit()
+
+        # self.vid_display = cv2.VideoWriter(f"data/vid/fill_{self.vid_index}.avi", cv2.VideoWriter_fourcc(*'MJPG'), 10, self.img_gray.size)
 
         self.LED_brightness = np.full(self.LED_positions[0].shape, LED_BRIGHTNESS_DEFAULT)
 
@@ -124,6 +136,8 @@ class webcam:
 
     def takePhoto(self):
         result, self.img = self.cam.read()
+        self.img_unDist = cv2.undistort(self.img, self.Camera_Matrix, self.Distortion_Coefficients, None, self.newcameramtx)
+        
 
     # Load input image
     def readImage(self):
@@ -246,7 +260,12 @@ class webcam:
         imgAng_y = (self.newcameramtx[1][2] - imgPos_y)/self.newcameramtx[1][1]
         self.ledData['xAng'].append(imgAng_x)
         self.ledData['yAng'].append(imgAng_y)
-
+        
+        crossLen = 4
+        cv2.line( self.img_dataPts, (round(imgPos_x-crossLen), round(imgPos_y)), (round(imgPos_x+crossLen), round(imgPos_y)), (0,0,255), 1)
+        cv2.line( self.img_dataPts, (round(imgPos_x), round(imgPos_y-crossLen)), (round(imgPos_x), round(imgPos_y+crossLen)), (0,0,255), 1)
+    
+    
         # print(f"imgPos_x:{imgPos_x}")
         # print(f"self.newcameramtx[0][2]:{self.newcameramtx[0][2]}")
         # print(f"self.newcameramtx[0][0]:{self.newcameramtx[0][0]}")
@@ -259,7 +278,14 @@ class webcam:
         
         return(True)
      
+    def newClip(self, inStr):
+        self.vid_display.release()
+        self.vid_display = cv2.VideoWriter(f"data/vid/{self.vid_index}_{inStr}.avi", cv2.VideoWriter_fourcc(*'XVID'), 10, self.outputDimensions, True)
+        # self.vid_display = cv2.VideoWriter(f"data/vid/{inStr}_{self.vid_index}.avi", cv2.VideoWriter_fourcc(*'MJPG'), 10, self.img_gray.size)
+
     def readVectors(self):
+        self.newClip('data')
+
         prevLED = -1
         currLED = 0
         # Loop until all LEDs are either measured or abandoned
@@ -280,7 +306,6 @@ class webcam:
             # print(f"potentials:{potentials}\n\n")
 
 
-
             if len(potentials) == 0:
                 print(f"No Potentials, taking pic")
                 self.readImage()
@@ -292,7 +317,7 @@ class webcam:
 
             print(f"Testing {str(currLED).ljust(4, ' ')}   ", end='')
 
-            self.roverComms.setLED(currLED, [self.LED_brightness[currLED], self.LED_brightness[currLED], self.LED_brightness[currLED]] )
+            self.roverComms.setLED(currLED, self.LED_brightness[currLED] )
             
             # Read and process image
             self.readImage()
@@ -313,20 +338,36 @@ class webcam:
 
             
             # Turn off LED
-            self.roverComms.setLED(currLED, [0, 0, 0] )
+            self.roverComms.setLED(currLED, 0 )
 
             # Display data
             self.updateDisplay()
             
 
+        # xMedian = st.median( self.ledData['xAng'] ) 
+        # yMedian = st.median( self.ledData['yAng'] ) 
+        # print(f"xMedian:{xMedian}")
+        # print(f"yMedian:{yMedian}")
+        # # for foo in self.ledData:
+        # #     print(f"{foo}:{self.ledData[foo]}")
+
+        # ii = 0
+        # while ii < len(self.ledData['xAng']):
+        #     if abs(self.ledData['xAng'] - xMedian) > 0.1 or abs(self.ledData['yAng'] - yMedian) > 0.1:
+        #         print(f"\n {self.ledData['xAng']},{self.ledData['yAng']}\n\n")
+                
+        #         for foo in self.ledData:
+        #             del self.ledData[foo][ii]
+        #     else:
+        #         ii += 1
+            
+        self.newClip('fill')
+        self.vid_index += 1
 
 
         return(self.ledData)
     
     def getData(self):
-        # imgAng_x = (self.ledData['xPix'] - self.img_thresh.shape[1]/2) / 668
-        # imgAng_y = (self.img_thresh.shape[0]/2 - self.ledData['yPix']) / 668 
-
         return(self.ledData)
     
     def getFails(self):
@@ -337,27 +378,33 @@ class webcam:
     #     imageio.mimsave(fileName, self.imagelist, fps=0.5)       
 
     def updateDisplay(self):
-        self.img_posOverLay = deepcopy(self.img_unDist)
+        # self.img_posOverLay = deepcopy(self.img_unDist)
         # self.img_points = np.zeros_like(self.img)
-        for ii in range(len(self.ledData['xPix'])):
-            xPix = round(self.ledData['xPix'][ii])
-            yPix = round(self.ledData['yPix'][ii])
-            pltRad = round(self.ledData['size'][ii]/30)
-            # cv2.circle( self.img_points, (xPix, yPix), pltRad, (0,0,255), 1)
+        # for ii in range(len(self.ledData['xPix'])):
+        #     xPix = round(self.ledData['xPix'][ii])
+        #     yPix = round(self.ledData['yPix'][ii])
+        #     pltRad = round(self.ledData['size'][ii]/30)
+        #     # cv2.circle( self.img_points, (xPix, yPix), pltRad, (0,0,255), 1)
             
-            crossLen = 4
-            cv2.line( self.img_posOverLay, (xPix-crossLen, yPix), (xPix+crossLen, yPix), (0,0,255), 1)
-            cv2.line( self.img_posOverLay, (xPix, yPix-crossLen), (xPix, yPix+crossLen), (0,0,255), 1)
+        #     crossLen = 4
+        #     cv2.line( self.img_posOverLay, (xPix-crossLen, yPix), (xPix+crossLen, yPix), (0,0,255), 1)
+        #     cv2.line( self.img_posOverLay, (xPix, yPix-crossLen), (xPix, yPix+crossLen), (0,0,255), 1)
         
         # self.img_gray = cv2.cvtColor(self.img_gray, cv2.COLOR_GRAY2BGR)
         display_thresh = cv2.cvtColor(self.img_thresh, cv2.COLOR_GRAY2BGR)
         display_subtract = cv2.cvtColor(self.img_subtract, cv2.COLOR_GRAY2BGR)
 
-        cv2.imshow('Display', adjacentImages([[self.img, self.img_posOverLay], [display_subtract, display_thresh]]))
+        outImage = adjacentImages( [[self.img_unDist, self.img_dataPts], [display_subtract, display_thresh]] )
+
+        cv2.imshow('Display', outImage)
+        self.vid_display.write(outImage)
 
     def updateJustImg(self):
         zeroImg = np.zeros_like(self.img)
-        cv2.imshow('Display', adjacentImages([[self.img, zeroImg], [zeroImg, zeroImg]]))
+        outImage = adjacentImages( [[self.img_unDist, self.img_dataPts], [zeroImg, zeroImg]] )
+
+        cv2.imshow('Display', outImage)
+        self.vid_display.write(outImage)
 
 # If this file is run as main, show video with center crosshair for camera calibration
 if __name__ == "__main__":

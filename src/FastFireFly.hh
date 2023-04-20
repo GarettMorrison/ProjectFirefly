@@ -73,14 +73,20 @@ class ledLocalizationFast{
         double error_cameraPosition(void); // Error between positions on image and positions in real data
 
     public:
+        // Init function
         ledLocalizationFast(vector<vector<double>> _LED_Set, vector<double> startPos = {0, 0, 1000, 0, 0, 0});
 
+        // Fit using angles in image as error
         vector<double> fitData_imageCentric(vector<vector<double>> _ang_set, vector<unsigned int> _LED_indices, size_t randomizeCount);
 
+        // Fit using 3D lines as error function
         vector<double> fitData_3D(vector<vector<double>> _ang_set, vector<unsigned int> _LED_indices, size_t randomizeCount); // Fit using 3D line distance error
         // vector<double> regressionFitLessRandom(vector<double> vect_X, vector<double> vect_Y, vector<double> vect_Z, vector<double> _LED_Indices);
         
+        // Getter for current position coords and eulers
         vector<double> getPosition(void){ return(currPos.getMotion()); }
+
+        // Getter for current LED positions
         vector<vector<double>> getLEDs(void){ return(currPos.getOutputs()); } // Get outputs from final LED position
         double getError(void){return(currentError);}
         double getRandFactor(void){return(randomizeFactor);}

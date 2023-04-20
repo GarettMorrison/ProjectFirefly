@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import math as m
 
-from py.positionFuncs import *
-
+import py.positionFuncs as pf
 
 
 fig = plt.figure()
@@ -22,14 +22,14 @@ def plotCoords(inPts):
     global noColorOverride, plotColor, ax
 
     if noColorOverride:
-        ax.scatter(inPts[1], inPts[0], inPts[2], depthshade=False)
+        ax.scatter(inPts[2], inPts[0], inPts[1], depthshade=False)
     else:
-        ax.scatter(inPts[1], inPts[0], inPts[2], depthshade=False, color=plotColor)
+        ax.scatter(inPts[2], inPts[0], inPts[1], depthshade=False, color=plotColor)
 
 def plotErrorLines(inVects, basePts):
     global noColorOverride, plotColor, ax
 
-    closestPts = getClosestPts(inVects, basePts)
+    closestPts = pf.getClosestPts(inVects, basePts)
     closPts = np.column_stack(closestPts)
     
     # for ii in range(len(inVects)):
@@ -74,6 +74,10 @@ def plotCameraVectorSections(camVects, bestPts):
 
 
 
+def plotLED_positions(positions):
+    plotJustLEDPos(positions[0], positions[1], positions[2])
+
+
 def plotJustLEDPos(LED_X, LED_Y, LED_Z):
     global noColorOverride, plotColor, ax
 
@@ -84,25 +88,62 @@ def plotJustLEDPos(LED_X, LED_Y, LED_Z):
             colVal = 1.0*ii/ptCount
             plotColor.append([1.0-colVal, 0.0, 0.0])
 
-    ax.scatter(LED_Y, LED_Z, LED_X, color=plotColor, depthshade=False)
+    ax.scatter(LED_Z, LED_X, LED_Y, color=plotColor, depthshade=False)
 
 
 
-def plotPosTransform(inMotion, plotRad=10):
+def plotPosTransform(inMotion, plotRad=10, doSurface=False):
     plotSet = [[0], [0], [0]]
     for ii in range(7):
-        plotSet[0].append(plotRad*sin(ii*m.pi*2/6))
-        plotSet[1].append(plotRad*cos(ii*m.pi*2/6))
-        plotSet[2].append(0)
+        plotSet[2].append(plotRad*m.sin(ii*m.pi*2/6))
+        plotSet[0].append(plotRad*m.cos(ii*m.pi*2/6))
+        plotSet[1].append(0)
 
-    plotSet = completeMotion(np.array(plotSet), inMotion)
     
-    if noColorOverride:
-        ax.plot(plotSet[1], plotSet[0], plotSet[2])
+    if doSurface:
+        # X, Z = np.meshgrid(plotSet[1], plotSet[0])
+        # Y, F = np.meshgrid(plotSet[2], plotSet[2])
+
+        X = np.array([
+            [plotRad/2, plotRad, plotRad/2, ],
+            [-plotRad/2, -plotRad, -plotRad/2, ],
+        ])
+        
+        Y = np.array([
+            [0, 0, 0],
+            [0, 0, 0],
+        ])
+        
+        Z = np.array([
+            [-plotRad*m.sqrt(2), 0, plotRad*m.sqrt(2)],
+            [-plotRad*m.sqrt(2), 0, plotRad*m.sqrt(2)],
+        ])
+
+        arrLen = len(X)
+
+        ptSet = np.array([X.ravel(), Y.ravel(), Z.ravel(), ])
+        # ravelData = pf.completeMotion(ptSet, inMotion[:3]+[0, 0, 0])
+        ravelData = pf.completeMotion(ptSet, inMotion)
+        # ravelData = ptSet
+        
+        X = ravelData[0].reshape((2, 3))
+        Y = ravelData[1].reshape((2, 3))
+        Z = ravelData[2].reshape((2, 3))
+
+        print(f"X:{X}")
+        print(f"Y:{Y}")
+        print(f"Z:{Z}")
+        print("\n\n\n\n\n")
+
+        # Plot dims are ZYX
+        ax.plot_surface(Z, X, Y, cmap='coolwarm')
+
     else:
-        ax.plot(plotSet[1], plotSet[0], plotSet[2], color=plotColor)
-
-
+        plotSet = pf.completeMotion(np.array(plotSet), inMotion)
+        if noColorOverride:
+            ax.plot(plotSet[2], plotSet[0], plotSet[1])
+        else:
+            ax.plot(plotSet[2], plotSet[0], plotSet[1], color=plotColor)
 
 
 
@@ -112,5 +153,5 @@ def showPlot():
     ax.set_ylabel('X')
     ax.set_zlabel('Y')
 
-    set_axes_equal(ax)
+    pf.set_axes_equal(ax)
     plt.show()

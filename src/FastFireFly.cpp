@@ -247,7 +247,7 @@ double ledLocalizationFast::error_3DpointLine(){
 
     for(size_t ii=0; ii<LED_indices.size(); ii++){
         int LED_Index = LED_indices[ii];
-        fooError = linePtDistanceSquared( 1.0, ang_line_set[0][ii], ang_line_set[1][ii], testPos[0][LED_Index], testPos[1][LED_Index], testPos[2][LED_Index] );
+        fooError = linePtDistanceSquared( 1.0, ang_line_set[1][ii], ang_line_set[0][ii], testPos[0][LED_Index], testPos[1][LED_Index], testPos[2][LED_Index] );
         testError += fooError;
     }
     

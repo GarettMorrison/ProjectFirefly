@@ -5,9 +5,40 @@ import numpy as np
 import pickle as pkl
 import imageio
 from copy import deepcopy
-from py.serialCommunication import listPorts, roverSerial
 import random
 import statistics as st
+
+# If this file is run as main, show video with center crosshair for camera calibration
+if __name__ == "__main__":
+    cap = cv2.VideoCapture(2)
+    if not cap.isOpened():
+        print("Cannot open camera")
+        exit()
+    while True:
+        # Capture frame-by-frame
+        ret, frame = cap.read()
+        # if frame is read correctly ret is True
+        if not ret:
+            print("Can't receive frame (stream end?). Exiting ...")
+            break
+        # Our operations on the frame come here
+        # gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        # Display the resulting frame
+        
+        frame = cv2.circle(frame, (round(frame.shape[1]/2), round(frame.shape[0]/2)), round(frame.shape[0]/4), (0, 0, 255), 1)
+        frame = cv2.line(frame, (0, round(frame.shape[0]/2)), (frame.shape[1], round(frame.shape[0]/2)), (0, 0, 255), 1)
+        frame = cv2.line(frame, (round(frame.shape[1]/2), 0), (round(frame.shape[1]/2), frame.shape[0]), (0, 0, 255), 1)
+
+        cv2.imshow('frame', frame)
+        if cv2.waitKey(1) == ord('q'):
+            break
+    # When everything done, release the capture
+    cap.release()
+    cv2.destroyAllWindows()
+
+
+
+from py.serialCommunication import listPorts, roverSerial
 
 
 TRESH_MIN = 120
@@ -53,10 +84,11 @@ def edge_filter(img):
 
 
 class webcam:
-    def __init__(self, _LED_positions, _roverComms, _LED_exclusion=[]):
+    def __init__(self, _LED_positions, _roverComms, _LED_exclusion=[], _doPrint = False):
         self.roverComms = _roverComms
         self.LED_positions = _LED_positions # 3xN array of LED positions for processing
         self.LED_count = len(self.LED_positions[0]) # Total number of LEDs
+        self.doPrint = _doPrint
 
         # Get easier array of mutually exclusive LEDs for each LED
         self.LED_nonConsecutives = np.full((self.LED_count, self.LED_count), 0)
@@ -274,7 +306,7 @@ class webcam:
         # print(f"\n\n")
 
         self.finishedLEDs.append(ledIndex)
-        print(f"Success {len(self.ledData['LED_X'])} {' '.ljust(80)} xAng:{round(imgAng_x,2)}   yAng:{round(imgAng_y,2)}   img_s:{round(imgPos_s,2)}")
+        # print(f"Success {len(self.ledData['LED_X'])} {' '.ljust(80)} xAng:{round(imgAng_x,2)}   yAng:{round(imgAng_y,2)}   img_s:{round(imgPos_s,2)}")
         
         return(True)
      
@@ -315,7 +347,7 @@ class webcam:
             
             currLED = potentials[m.floor(random.random()*len(potentials))]
 
-            print(f"Testing {str(currLED).ljust(4, ' ')}   ", end='')
+            if self.doPrint: print(f"Testing {str(currLED).ljust(4, ' ')}   ", end='')
 
             self.roverComms.setLED(currLED, self.LED_brightness[currLED] )
             
@@ -329,11 +361,11 @@ class webcam:
 
                 if len(self.failedAttempts[currLED]) >= MAX_ATTEMPTS:
                     if currLED not in self.finishedLEDs: self.finishedLEDs.append(currLED)
-                    print("Abandoned ", end='')
+                    if self.doPrint: print("Abandoned ", end='')
                 else:
-                    print("Failed    ", end='')
+                    if self.doPrint: print("Failed    ", end='')
 
-                print(f"{attempt[0].ljust(20, ' ')}  {str(attempt[1]).ljust(5, ' ')}  {str(attempt[2]).ljust(5, ' ')}  {str(attempt[3]).ljust(5, ' ')} setting brightness to {self.LED_brightness[currLED]}")
+                if self.doPrint: print(f"{attempt[0].ljust(20, ' ')}  {str(attempt[1]).ljust(5, ' ')}  {str(attempt[2]).ljust(5, ' ')}  {str(attempt[3]).ljust(5, ' ')} setting brightness to {self.LED_brightness[currLED]}")
 
 
             
@@ -405,31 +437,3 @@ class webcam:
 
         cv2.imshow('Display', outImage)
         self.vid_display.write(outImage)
-
-# If this file is run as main, show video with center crosshair for camera calibration
-if __name__ == "__main__":
-    cap = cv2.VideoCapture(0)
-    if not cap.isOpened():
-        print("Cannot open camera")
-        exit()
-    while True:
-        # Capture frame-by-frame
-        ret, frame = cap.read()
-        # if frame is read correctly ret is True
-        if not ret:
-            print("Can't receive frame (stream end?). Exiting ...")
-            break
-        # Our operations on the frame come here
-        # gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        # Display the resulting frame
-        
-        frame = cv2.circle(frame, (round(frame.shape[1]/2), round(frame.shape[0]/2)), round(frame.shape[0]/4), (0, 0, 255), 1)
-        frame = cv2.line(frame, (0, round(frame.shape[0]/2)), (frame.shape[1], round(frame.shape[0]/2)), (0, 0, 255), 1)
-        frame = cv2.line(frame, (round(frame.shape[1]/2), 0), (round(frame.shape[1]/2), frame.shape[0]), (0, 0, 255), 1)
-
-        cv2.imshow('frame', frame)
-        if cv2.waitKey(1) == ord('q'):
-            break
-    # When everything done, release the capture
-    cap.release()
-    cv2.destroyAllWindows()

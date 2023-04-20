@@ -12,7 +12,7 @@ import pickle as pkl
 import serial.tools.list_ports
 
 # fooPort = "COM3"
-fooPort = "COM6"
+fooPort = "COM7"
 def listPorts():
     ports = serial.tools.list_ports.comports()
     print("Comports Available:")
@@ -42,6 +42,11 @@ class roverSerial:
         numSet = [2, direction, m.floor(duration/256), duration%256]
         self.sendBytes(numSet)
 
+
+    def doCelebration(self):
+        numSet = [4, 0, 0, 0]
+        self.sendBytes(numSet)
+
         
     def sendBytes(self, numSet):
         checkSum_sent = sum(numSet)%256
@@ -54,21 +59,22 @@ class roverSerial:
             setAttempts += 1
             self.ser.write(byteSend)
             self.ser.flush()
-            print(f"\nSending {str(numSet).rjust(15, ' ')} -> {' '.join('{:02x}'.format(x) for x in byteSend)}")
+            # print(f"\nSending {str(numSet).rjust(15, ' ')} -> {' '.join('{:02x}'.format(x) for x in byteSend)}")
             
             checkSum_read = self.ser.read()
             # print(f"read:{checkSum_read}")
             if(len(checkSum_read) == 0): 
-                print(f"   len(checkSum_read) == 0, checkSum={checkSum_read}")  
+                # print(f"   len(checkSum_read) == 0, checkSum={checkSum_read}")  
                 continue
 
             checkSum_read = int.from_bytes(checkSum_read, 'big')
 
             if checkSum_read == checkSum_sent:
                 break
-            else:
-                print(f"   {checkSum_read} != {checkSum_sent}")
-            if self.ser.in_waiting > 0: print(f"Dumped {' '.join('{:02x}'.format(x) for x in self.ser.read(self.ser.in_waiting))}")
+            # else:
+            #     print(f"   {checkSum_read} != {checkSum_sent}")
+            # if self.ser.in_waiting > 0: print(f"Dumped {' '.join('{:02x}'.format(x) for x in self.ser.read(self.ser.in_waiting))}")
+            if self.ser.in_waiting > 0: self.ser.read(self.ser.in_waiting)
 
 # listPorts()
 if __name__ == "__main__":

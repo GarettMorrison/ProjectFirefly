@@ -36,6 +36,9 @@ def doRotationMatrixes(inPts, rotations, transposed = False):
 
     return([xPts, yPts, zPts])
 
+def motionToZAng(inMotion):
+    return np.arctan2(-sin(inMotion[4]), cos(inMotion[4])*cos(inMotion[5]))
+
 # PROBABLY BROKEN MAYBE
 # def doRotationMatrixes(inPts, rotations, transposed = False):
 #     A = rotations[0]
@@ -110,7 +113,22 @@ def addMotions(motion1, motion2, transpose1 = False):
 
 
 def getMotionBetween(motion1, motion2):
-    outMat = np.matmul( np.linalg.inv(transformationMatrix(motion1)), transformationMatrix(motion2) )
+    outMat = np.matmul( np.linalg.inv(transformationMatrix(motion2)), transformationMatrix(motion1)) 
+    
+    outMotion = [
+        outMat[0][3],
+        outMat[1][3],
+        outMat[2][3],
+        np.arctan2(outMat[2][1], outMat[2][2]),
+        np.arctan2(-outMat[2][0], m.sqrt(pow(outMat[3][1], 2) + pow(outMat[2][2], 2))),
+        np.arctan2(outMat[1][0], outMat[0][0]),
+    ]
+
+    return(outMotion)
+
+
+def normalizeMotion(inMotion):
+    outMat = transformationMatrix(inMotion)
     
     outMotion = [
         outMat[0][3],

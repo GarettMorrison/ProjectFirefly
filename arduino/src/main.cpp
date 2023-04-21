@@ -1,18 +1,24 @@
 #include <Arduino.h>
 
-#include "config.h"
+// // Uncomment one of these to flash this specific rover
+// const char ROVER_ID[] =  "TATE__";
+// #include "StandardLEDS.h"
 
-// LED Strip
-#include <FastLED.h>
-#define LED_TYPE    WS2811
-#define LED_PIN    6
-#define NUM_LEDS    18
-#define COLOR_ORDER GRB
-CRGB leds[NUM_LEDS];
+const char ROVER_ID[] =  "LIZA__";
+#include "StandardLEDS.h"
+
+// static char ROVER_ID[] =  "BROCK_";
+// #include "LED_Strips.h"
+
+#define COLLISION_DISTANCE 100 // Distance to stop to prevent collisions
+
+// Constants for most recently referenced message
+uint8_t messageBytes[5];
+uint8_t checkSum;
+uint8_t checkSumRead;
 
 
 // VL53L0X
-
 #include "VL53L0X.h"
 #include <Wire.h>
 const size_t VL53L0X_count = 3; // How many sensors
@@ -59,6 +65,10 @@ void readSensors(){
   for(size_t ii=0; ii<VL53L0X_count; ii++){
     VL53L0X_data[ii] = VL53L0X_lox[ii].readRangeSingleMillimeters();
   }
+}
+
+void readSingleSensor(size_t ii){
+    VL53L0X_data[ii] = VL53L0X_lox[ii].readRangeSingleMillimeters();
 }
 
 
@@ -131,16 +141,21 @@ void roverDrive(uint8_t driveSel, uint16_t runDur){
   while(true){
     // Check time 
     uint32_t currTime = millis();
-    if(currTime - startTime > runDur) break;
+    if(currTime - startTime >= runDur) break;
 
-    // // Detect collision
+    // Detect collision
+    if(currIter < 3){
+      readSingleSensor(currIter);
+      if(VL53L0X_data[currIter] < COLLISION_DISTANCE) break;
+    }
+
     // readSensors();
     // for(size_t ii=0; ii<VL53L0X_count; ii++){
-    //   if(VL53L0X_data[ii] > 0) break;
+    //   if(VL53L0X_data[ii] < COLLISION_DISTANCE) break;
     // }
 
     // Do PWM
-    if(currIter%2 == 1){
+    if(currIter == 1){
       digitalWrite(driveSel_1, LOW);
       digitalWrite(driveSel_2, LOW);
     }
@@ -150,7 +165,7 @@ void roverDrive(uint8_t driveSel, uint16_t runDur){
     }
 
     currIter += 1;
-    if(currIter >= 5) currIter = 0;
+    if(currIter > 2) currIter = 0;
   }
 
   digitalWrite(driveSel_1, LOW);
@@ -161,16 +176,16 @@ void roverDrive(uint8_t driveSel, uint16_t runDur){
 
 //HC06
 
-#define HC06_AT 11 // Pin to switch to AT mode
+// #define HC06_AT 11 // Pin to switch to AT mode
 
-// Configure Bluetooth serial setup
-void bluetoothSerialConfig(){
-  pinMode(HC06_AT, OUTPUT);
-  digitalWrite(HC06_AT, LOW);
+// // Configure Bluetooth serial setup
+// void bluetoothSerialConfig(){
+//   pinMode(HC06_AT, OUTPUT);
+//   digitalWrite(HC06_AT, LOW);
 
-  // TODO: use AT command mode to set name and password on HC05 module to rover ID
-  // https://www.keuwl.com/electronics/rduino/bluet/09-baud-rate/
-}
+//   // TODO: use AT command mode to set name and password on HC05 module to rover ID
+//   // https://www.keuwl.com/electronics/rduino/bluet/09-baud-rate/
+// }
 
 
 
@@ -183,13 +198,7 @@ void setup() {
   Serial.begin(9600); // Default communication rate of the Bluetooth module
   Wire.begin(); // Init wire (I2C) communication
 
-  if(USE_BLUETOOTH_SERIAL) bluetoothSerialConfig(); // if using bluetooth serial, config HC06 Module
-
-  // // Init LED pins as outputs (Pins 2->9)
-  // for(size_t ii=2; ii<10; ii++){
-  //   pinMode(ii, OUTPUT);
-  //   digitalWrite(ii, LOW);
-  // }
+  LED_setup(); // Init LEDs from config function
 
   VL53L0X_config(); // Sensor init
 
@@ -198,24 +207,16 @@ void setup() {
     delay(1);
   }
   
-  FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip ); // Set up LED strip
+  
+  // celebration();
 }
 
+
+
 uint8_t led_position = 0;
-
-
-// uint8_t readByte(){
-//   uint8_t outVal = Serial.read();
-//   // Serial.write(outVal);
-//   return(outVal);
-// }
-
-uint8_t messageBytes[5];
-uint8_t checkSum;
-uint8_t checkSumRead;
+uint8_t led_brightness = 0;
 
 void loop() {
-
   // Read all Serial commands
   while(Serial.available() >= 5){
     checkSum = 0;
@@ -224,33 +225,65 @@ void loop() {
       checkSum += messageBytes[ii];
     }
     checkSumRead = Serial.read();
-    
+
+
 
     if(checkSum == checkSumRead){
         // Turn on LED
       if(messageBytes[0] == 1){
           led_position = messageBytes[1];
-          leds[led_position].r = messageBytes[2];
-          leds[led_position].g = messageBytes[2];
-          leds[led_position].b = messageBytes[2];
-          FastLED.show(); // apply the function on led strip
+          led_brightness = messageBytes[2];
+          setLEDval(led_position, led_brightness);
       }
         // Drive
       else if(messageBytes[0] == 2){
         // Serial.write(0xFFFFFF);
         roverDrive(messageBytes[1], messageBytes[2]*256+messageBytes[3]);
       }
-      // else{
-      //   Serial.write(0xAAAAAA);
-      // }
+      // Do light show
+      else if(messageBytes[0] == 4){
+        celebration();
+      }
+
+      // The remainder are serial callbacks, send checkSum before doing action
+
+      // Lidar Data Request
+      else if(messageBytes[0] == 8){
+        readSensors(); // Load data into VL53L0X_data
+        
+        Serial.write(checkSum);
+
+        uint8_t checkSum_2 = 0;
+        for(size_t ii=0; ii<3; ii++){
+          Serial.write(VL53L0X_data[ii]%256); // Send LSB
+          checkSum_2 += VL53L0X_data[ii]%256;
+
+          Serial.write(VL53L0X_data[ii]/256); // Send MSB
+          checkSum_2 += VL53L0X_data[ii]/256;
+        }
+        Serial.flush();
+        continue; // Do not finish loop (which would resend checksum), bail from here
+      }
+    
+      // Chip ID Request
+      else if(messageBytes[0] == 16){
+        // uint8_t checkSum_2 = 0;
+        Serial.write(checkSum);
+        
+        for(size_t ii=0; ii<6; ii++){
+          Serial.write(ROVER_ID[ii]); // Send character ID
+          // checkSum_2 += ROVER_ID[ii];
+        }
+        Serial.flush();
+        continue; // Do not finish loop (which would resend checksum), bail from here
+      }
     }
-    else{
+    else{ // Checksum error, clear buffer
       delay(1);
       while (Serial.available() > 0) Serial.read();
     }
     
     Serial.write(checkSum);
-    // for(size_t ii=0; ii<4; ii++) Serial.write( messageBytes[ii] );
     Serial.flush();
   }
   

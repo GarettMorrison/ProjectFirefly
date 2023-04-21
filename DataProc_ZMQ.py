@@ -5,51 +5,30 @@ import statistics as st
 import sys
 
 from py.positionFuncs import *
+import roverConfig as rc
 
 # sys.path.insert(0, '/swig')
 import swig.FastFireFly as FFF
 
-DO_FILEOUT = True
-CHECK_DUR =0.5
-
-
-# LED Positions by index
-# LED_X = np.array( [ -112.5833025,-91.92388155,-65,-32.5,-45.96194078,-56.29165125,56.29165125,45.96194078,32.5,65,91.92388155,112.5833025,56.29165125,45.96194078,32.5,-32.5,-45.96194078,-56.29165125 ] )
-# LED_Z = np.array( [ 65, 91.92388155, 112.5833025, 112.5833025, 91.92388155, 65, 65, 91.92388155, 112.5833025, 112.5833025, 91.92388155, 65, 65, 91.92388155, 112.5833025, 112.5833025, 91.92388155, 65 ] )
-# LED_Y = np.array( [ 0, 0, 0, -56.29165125, -79.60841664, -97.5, -97.5, -79.60841664, -56.29165125, 0, 0, 0, 97.5, 79.60841664, 56.29165125, 56.29165125, 79.60841664, 97.5 ] )
-
-LED_X = np.array( [ 0, 0, 0, 28.14582562, 39.80420832, 48.75, 48.75, 39.80420832, 28.14582562, 0, 0, 0, -48.75, -39.80420832, -28.14582562, -28.14582562, -39.80420832, -48.75 ] )
-LED_Y = np.array( [ 32.5, 45.96194078, 56.29165125, 56.29165125, 45.96194078, 32.5, 32.5, 45.96194078, 56.29165125, 56.29165125, 45.96194078, 32.5, 32.5, 45.96194078, 56.29165125, 56.29165125, 45.96194078, 32.5 ] )
-LED_Z = np.array( [ -56.29165125, -45.96194078, -32.5, -16.25, -22.98097039, -28.14582562, 28.14582562, 22.98097039, 16.25, 32.5, 45.96194078, 56.29165125, 28.14582562, 22.98097039, 16.25, -16.25, -22.98097039, -28.14582562 ] )
+DO_FILEOUT = False
+CHECK_DUR = 0.5
 
 
 
-ptCount = len(LED_X)
-plotColor = []
-for ii in range(ptCount):
-    colVal = 1.0*ii/ptCount
-    plotColor.append([1.0-colVal, 0.0, 0.0])
-
-# # Set plot color to position range 
-# plotColor = []
-# for ii in range(len(LED_X)): plotColor.append([1.0-1.0*ii/len(LED_X), 0.0, 0.0])
-# plotColor = np.array(plotColor)
-
-# # Plot just LED positions for demo purposes
-# plot3D.plotJustLEDPos(LED_X, LED_Z, LED_Y)
-# plot3D.showPlot()
-# exit()
-
-
-defaultPosition = [1000, 0, 0, 0, 0, 0]
-prevMotion = defaultPosition
+defaultPosition = [1000, 0, 0, 0, 0, 1.0]
+prevMotionSet = {}
 
 writePoints = open("data/PositionLog.csv", "w+")
 writePoints.close()
 
-def calculatePosition(ptIndex, point_camXAngle, point_camYAngle):
-    global plotColSet, runIndex, prevMotion, defaultPosition
+def calculatePosition(roverID, ptIndex, point_camXAngle, point_camYAngle):
+    global prevMotionSet, defaultPosition
     ptAngs = np.array([point_camXAngle, point_camYAngle], dtype=np.double)
+    
+    # Load positional data for rover
+    roverIDname = rc.rover_nameByIndex[roverID]
+    lanternPointSet = rc.rover_configSet[roverIDname]['LED_positions']
+    ptCount = len(lanternPointSet[0])
 
     if ptCount == 0:
         print("NO DATA")
@@ -65,43 +44,58 @@ def calculatePosition(ptIndex, point_camXAngle, point_camYAngle):
     # Y is the vertical in the image, and increases towards the top
     # Z is the horizontal in the image, and increases towards the right
 
+    if roverID in prevMotionSet:
+        prevMotion = prevMotionSet[roverID]
+    else:
+        prevMotion = defaultPosition
+
+    print(f"Starting Localization")
     # Actually call localization
-    localization = FFF.ledLocalizationFast([LED_X, LED_Y, LED_Z], prevMotion)
+    localization = FFF.ledLocalizationFast(lanternPointSet, prevMotion)
     motion_best = localization.fitData_imageCentric(ptAngs, ptIndex.tolist(), 1000)
     motion_best = localization.fitData_3D(ptAngs, ptIndex.tolist(), 10000)
-
-    testAttempts = 0
-    maxTestAttempts = 6
     
-    testParameters = [
-        [1000, 40000, 1000],
-        [500, 50000, 0],
-        [250, 50000, 0],
-        [100, 50000, 0],
-        [20, 50000, 0],
-        [4, 50000, 0],
-        [0.5, 50000, 0],
-    ]
+    DataProc_config = rc.rover_configSet[roverIDname]['DataProc_config']
+    acceptableError = DataProc_config['acceptableError']
+    targetError = DataProc_config['targetError']
+    maxAttempts = DataProc_config['maxAttempts']
+    
+    testAttempts = 0
 
-    for fooParams in testParameters:
-        reqError = fooParams[0]
-        fitAttempts = fooParams[1]
-        imageCentricAttempts = fooParams[2]
-        while localization.getError()/ptCount > reqError and testAttempts < maxTestAttempts:
-            print(f"Error > {reqError}: {localization.getError()/ptCount}")
-            # localization = FFF.ledLocalizationFast([LED_X, LED_Y, LED_Z], prevMotion)
-            # if imageCentricAttempts > 0: motion_best = localization.fitData_imageCentric(ptAngs, ptIndex.tolist(), imageCentricAttempts)
-            motion_best = localization.fitData_3D(ptAngs, ptIndex.tolist(), fitAttempts)
-            testAttempts += 1
-        prevMotion = motion_best
+    while localization.getError()/ptCount > targetError and testAttempts < maxAttempts:
+        print(f"Error > {targetError}: {localization.getError()/ptCount}")
+        motion_best = localization.fitData_3D(ptAngs, ptIndex.tolist(), 50000)
+        testAttempts += 1
 
-        if testAttempts > maxTestAttempts: break
+    prevMotion = motion_best
+
 
 
     fooError = localization.getError()/ptCount
 
-    if testAttempts >= maxTestAttempts and localization.getError()/ptCount > testParameters[-2][0]: 
-        print("Exceeded max attempts :(")
+
+
+    # Optional data plot
+    if False:
+        outPtSet = completeMotion(lanternPointSet, motion_best)
+        outXAng = np.arctan2(outPtSet[2], outPtSet[0])
+        outYAng = np.arctan2(outPtSet[1], outPtSet[0])
+    
+        for ii in range(len(ptIndex)):
+            plt.plot(
+                [point_camXAngle[ii], outXAng[ptIndex[ii]]],
+                [point_camYAngle[ii], outYAng[ptIndex[ii]]],
+                color='black'
+            )
+            
+        plt.scatter(outXAng, outYAng)
+        plt.scatter(point_camXAngle, point_camYAngle)
+        plt.show()
+
+
+
+    if testAttempts >= maxAttempts and localization.getError()/ptCount > acceptableError: 
+        print(f"Exceeded max attempts :(, error > {acceptableError}")
         return([1])
     
 
@@ -116,6 +110,9 @@ def calculatePosition(ptIndex, point_camXAngle, point_camYAngle):
     for foo in motion_best: print(f"{str(round(foo,5)).rjust(15, ' ')}", end='')
     print('')
 
+    # Save motion to use as base pos for future runs
+    prevMotionSet[roverID] = motion_best
+
     return(motion_best)
 
 
@@ -124,7 +121,7 @@ def calculatePosition(ptIndex, point_camXAngle, point_camYAngle):
 import zmq
 
 # nameserver for windows, cat /etc/resolv.conf
-NameServer = "172.20.80.1"
+NameServer = rc.LOCALHOST_NAME_SERVER
 context = zmq.Context()
 socket = context.socket(zmq.REP)
 socket.connect(f"tcp://{NameServer}:5555")
@@ -145,17 +142,19 @@ while True:
     index_size = np.dtype(np.uint32).itemsize*num_elements
     vect_size = np.dtype(np.double).itemsize*num_elements
     
-    point_indices = np.frombuffer(data[:index_size], dtype=np.uint32)
-    point_camXAngle = np.frombuffer(data[index_size : index_size+vect_size], dtype=np.double)
-    point_camYAngle = np.frombuffer(data[index_size+vect_size : index_size+vect_size*2], dtype=np.double)
+    roverID = int(data[0])
+    point_indices = np.frombuffer(data[1 : 1+index_size], dtype=np.uint32)
+    point_camXAngle = np.frombuffer(data[1+index_size : 1+index_size+vect_size], dtype=np.double)
+    point_camYAngle = np.frombuffer(data[1+index_size+vect_size : 1+index_size+vect_size*2], dtype=np.double)
 
 
+    print(f"\nProcessing rover[{roverID}]: {rc.rover_nameByIndex[roverID]}")
     print(f"point_indices:{point_indices}")
     print(f"point_camXAngle:{point_camXAngle}")
     print(f"point_camYAngle:{point_camYAngle}")
 
 
-    posList = calculatePosition(point_indices, point_camXAngle, point_camYAngle)
+    posList = calculatePosition(roverID, point_indices, point_camXAngle, point_camYAngle)
     outPosition = np.array(posList, dtype=np.double)
     
     print(f"Sending Position: {outPosition}")

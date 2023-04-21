@@ -8,6 +8,7 @@ from copy import deepcopy
 import random
 import statistics as st
 
+
 # If this file is run as main, show video with center crosshair for camera calibration
 if __name__ == "__main__":
     cap = cv2.VideoCapture(2)
@@ -38,6 +39,7 @@ if __name__ == "__main__":
 
 
 
+import roverConfig as rc
 from py.serialCommunication import listPorts, roverSerial
 
 
@@ -45,12 +47,12 @@ TRESH_MIN = 120
 
 LED_BRIGHTNESS_MIN = 5
 LED_BRIGHTNESS_MAX = 255
-LED_BRIGHTNESS_DEFAULT = 150
 
-SPOT_SIZE_MIN = 30
-SPOT_SIZE_MAX = 130
+SPOT_SIZE_MIN = 20
+SPOT_SIZE_DROP_SIZE = 150
+SPOT_SIZE_MAX = 200
 
-MAX_ATTEMPTS = 6
+MAX_ATTEMPTS = 2
 
 MIN_PHOTO_PERIOD = 0.2
 
@@ -84,20 +86,9 @@ def edge_filter(img):
 
 
 class webcam:
-    def __init__(self, _LED_positions, _roverComms, _LED_exclusion=[], _doPrint = False):
-        self.roverComms = _roverComms
-        self.LED_positions = _LED_positions # 3xN array of LED positions for processing
-        self.LED_count = len(self.LED_positions[0]) # Total number of LEDs
-        self.doPrint = _doPrint
-
-        # Get easier array of mutually exclusive LEDs for each LED
-        self.LED_nonConsecutives = np.full((self.LED_count, self.LED_count), 0)
-        for fooExclusionSet in _LED_exclusion:
-            fooExclusionSetNP = np.array(fooExclusionSet)
-            for fooExclude in fooExclusionSetNP:
-                self.LED_nonConsecutives[fooExclude][fooExclusionSetNP] = 1
-        
-
+    def __init__(self, _doPrint = False):
+        self.doPrint = _doPrint 
+        self.displayCol = (255, 255, 255)
         # Load and configure camera data                
         inFile =  open('camera_calibration/cameraCal.yaml', 'rb')
         cameraDict = pkl.load(inFile)
@@ -129,42 +120,6 @@ class webcam:
         self.vid_display = cv2.VideoWriter(f"data/vid/{0}_fill.avi", cv2.VideoWriter_fourcc(*'XVID'), 10, self.outputDimensions, True)
         self.vid_index = 1
 
-        # for ii in range(100): self.vid_display.write(self.img)
-        # self.vid_display.release()
-        # exit()
-
-        # self.vid_display = cv2.VideoWriter(f"data/vid/fill_{self.vid_index}.avi", cv2.VideoWriter_fourcc(*'MJPG'), 10, self.img_gray.size)
-
-        self.LED_brightness = np.full(self.LED_positions[0].shape, LED_BRIGHTNESS_DEFAULT)
-
-        # Set up displays to allow rearranging them before recording
-        # cv2.imshow('Display', adjacentImages([[self.prevImg, self.prevImg]])) # Show original) # Show original
-        # cv2.waitKey(1)
-        # plt.draw()
-        self.clearData()
-
-    def clearData(self):
-        # Output information about LEDs
-        self.ledData = { 
-            'size': [], # Size of threshold area
-            'index': [], # Index of pixel
-            'brightness': [], # LED Brightness Setting
-            # LED Position in image (in pixels)
-            'xPix': [],
-            'yPix': [],
-            # LED vector angle (rad)
-            'xAng': [],
-            'yAng': [],
-            # LED XYZ Position on Lantern (mm)
-            'LED_X': [],
-            'LED_Y': [],
-            'LED_Z': [],
-        }
-        
-        # Save data from previous attempts
-        # Structure is [type of failure (str), size, brightness, number of areas]
-        self.failedAttempts = [[] for foo in range(self.LED_count)]
-        self.finishedLEDs = []
 
     def takePhoto(self):
         result, self.img = self.cam.read()
@@ -192,18 +147,8 @@ class webcam:
 
         return(self.img)
 
-    def adjustBrightness(self, ledIndex, adjustAmount):
-        if abs(adjustAmount) < 20: adjustAmount = 20*adjustAmount/abs(adjustAmount)
-
-        newBrightNess = m.floor(self.LED_brightness[ledIndex] + adjustAmount)
-        newBrightNess = np.sort([LED_BRIGHTNESS_MIN, newBrightNess, LED_BRIGHTNESS_MAX])[1]
-        self.LED_brightness[ledIndex] = newBrightNess
-
-        for fooNeighbor in np.where( self.LED_nonConsecutives[ledIndex] <= 0 )[0]:
-            if self.LED_brightness[fooNeighbor] == LED_BRIGHTNESS_DEFAULT: self.LED_brightness[fooNeighbor] = newBrightNess
-
     # Process most recent image
-    def processImg(self, ledIndex):
+    def processImg(self, ledIndex, ledData):
         # Blur and subtract image
         blurConvolution = (5, 5)        
         self.img_subtract = cv2.subtract(cv2.GaussianBlur(self.img_gray, blurConvolution, 0), cv2.GaussianBlur(self.prevImg_gray, blurConvolution, 0)) 
@@ -213,22 +158,16 @@ class webcam:
         contours, hierarchy= cv2.findContours(self.img_thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         sorted_contours= sorted(contours, key=cv2.contourArea, reverse= True)
         
-        # Catch error states
         if len(sorted_contours) == 0: # No point detected
-            if len(self.failedAttempts[ledIndex]) == 0: # No point and is first attempt, so set brightness to max
-                self.LED_brightness[ledIndex] = 255
-                self.failedAttempts[ledIndex].append(['NO SPOT, SET MAX', 0, self.LED_brightness[ledIndex], 0])
-            elif self.LED_brightness[ledIndex] == 255: # No point at maximum brightness, bail
-                self.failedAttempts[ledIndex].append(['NO SPOT AT MAX', 0, self.LED_brightness[ledIndex], 0])
-                self.finishedLEDs.append(ledIndex)
-            else: # No point but not first attept, undershot diff, make change
-                self.failedAttempts[ledIndex].append(['NO SPOT', 0, self.LED_brightness[ledIndex], 0])
-                self.adjustBrightness(ledIndex, 60)
+            if self.LED_hasBrightness and self.LED_brightness <= 250: self.LED_brightness += 3
+            self.failedAttempts[ledIndex].append(['NO SPOT', 0, self.LED_brightness, 0])
+            self.finishedLEDs.append(ledIndex) # If no point, no just too small, immediately stop trying
             return(False)
         
-        elif len(sorted_contours) > 1: # Too many points (reflections), decrease brightness
-            self.failedAttempts[ledIndex].append(['MULTIPLE SPOTS', 0, self.LED_brightness[ledIndex], len(sorted_contours)])
-            self.adjustBrightness(ledIndex, -60)
+        if len(sorted_contours) > 1: # No point detected
+            if self.LED_hasBrightness and self.LED_brightness <= 250: self.LED_brightness -= 3
+            self.failedAttempts[ledIndex].append(['MULTIPLE SPOT', 0, self.LED_brightness, 0])
+            if not self.LED_hasBrightness: self.finishedLEDs.append(ledIndex) # If no point, no just too small, immediately stop trying
             return(False)
 
         # Draw contours and load pixel data
@@ -239,38 +178,21 @@ class webcam:
         imgPos_s = len(mass_x) # Number of pixels in spot
 
 
-        # Catch if spot size is out of range
-        if imgPos_s < SPOT_SIZE_MIN: # Too small
-            if len(self.failedAttempts[ledIndex]) > 0 and self.failedAttempts[ledIndex][-1][2] == 255 and 'SPOT UNDER SIZE' in self.failedAttempts[ledIndex][-1][0]: # Previous attempt was at max brightness and too small, bail
-                self.failedAttempts[ledIndex].append(['SPOT UNDER SIZE AT MAX', imgPos_s, self.LED_brightness[ledIndex], 1])
-                self.finishedLEDs.append(ledIndex)
-                return(False)
-            
-            if len(self.failedAttempts[ledIndex]) < 1: # initial attempt was first try and too small, set to max
-                self.LED_brightness[ledIndex] = 255
-                self.failedAttempts[ledIndex].append(['SPOT UNDER SIZE AT START', imgPos_s, self.LED_brightness[ledIndex], 1])
-                return(False)
-            
-            if len(self.failedAttempts[ledIndex]) > 0 and self.failedAttempts[ledIndex][-1][0] == 'SPOT UNDER SIZE': # Undercorrection
-                self.adjustBrightness(ledIndex, (SPOT_SIZE_MIN - imgPos_s)*2)
-            elif len(self.failedAttempts[ledIndex]) > 0 and self.failedAttempts[ledIndex][-1][0] == 'SPOT OVER SIZE': # Overcorrection
-                self.adjustBrightness(ledIndex, (SPOT_SIZE_MIN - imgPos_s)/4)
-            else:
-                self.adjustBrightness(ledIndex, (SPOT_SIZE_MIN - imgPos_s))
-                
-            self.failedAttempts[ledIndex].append(['SPOT UNDER SIZE', imgPos_s, self.LED_brightness[ledIndex], 1])
-            return(False)
 
-        elif imgPos_s > SPOT_SIZE_MAX: # Too large
-            # if len(self.failedAttempts[ledIndex]) > 1 and self.failedAttempts[ledIndex][-1][0] == 'SPOT OVER SIZE': # Undercorrection
-            #     self.adjustBrightness(ledIndex, (SPOT_SIZE_MAX - imgPos_s)*2)
-            if len(self.failedAttempts[ledIndex]) > 0 and self.failedAttempts[ledIndex][-1][0] == 'SPOT UNDER SIZE': # Overcorrection
-                self.adjustBrightness(ledIndex, (SPOT_SIZE_MAX - imgPos_s)/3)
-            else:
-                self.adjustBrightness(ledIndex, (SPOT_SIZE_MAX - imgPos_s)*2)
-                
-            self.failedAttempts[ledIndex].append(['SPOT OVER SIZE', imgPos_s, self.LED_brightness[ledIndex], 1])
+        if imgPos_s < SPOT_SIZE_MIN: # Too small
+            if self.LED_hasBrightness and self.LED_brightness <= 245: self.LED_brightness += 10
+            self.failedAttempts[ledIndex].append(['SPOT UNDER SIZE', imgPos_s, self.LED_brightness, 1])
             return(False)
+    
+        # Catch if spot size is out of range if we have brightness control
+        if self.LED_hasBrightness:
+            # Decrease brightness if over SPOT_SIZE_DROP_SIZE
+            if imgPos_s > SPOT_SIZE_DROP_SIZE:
+                if self.LED_brightness > 30: self.LED_brightness -= 30
+
+            if imgPos_s > SPOT_SIZE_MAX: # Too large
+                self.failedAttempts[ledIndex].append(['SPOT OVER SIZE', imgPos_s, self.LED_brightness, 1])
+                return(False)
 
 
         # Get center of LED position
@@ -278,24 +200,24 @@ class webcam:
         imgPos_y = np.average(mass_y)
         
         # Save data point
-        self.ledData['size'].append(imgPos_s)
-        self.ledData['index'].append(ledIndex)
-        self.ledData['brightness'].append(self.LED_brightness[ledIndex])
-        self.ledData['xPix'].append(imgPos_x)
-        self.ledData['yPix'].append(imgPos_y)
-        self.ledData['LED_X'].append(self.LED_positions[0][ledIndex])
-        self.ledData['LED_Y'].append(self.LED_positions[1][ledIndex])
-        self.ledData['LED_Z'].append(self.LED_positions[2][ledIndex])
+        ledData['size'].append(imgPos_s)
+        ledData['index'].append(ledIndex)
+        ledData['brightness'].append(self.LED_brightness)
+        ledData['xPix'].append(imgPos_x)
+        ledData['yPix'].append(imgPos_y)
+        ledData['LED_X'].append(self.LED_positions[0][ledIndex])
+        ledData['LED_Y'].append(self.LED_positions[1][ledIndex])
+        ledData['LED_Z'].append(self.LED_positions[2][ledIndex])
 
         # Use camera matrix to convert points to angle
         imgAng_x = (imgPos_x - self.newcameramtx[0][2])/self.newcameramtx[0][0]
         imgAng_y = (self.newcameramtx[1][2] - imgPos_y)/self.newcameramtx[1][1]
-        self.ledData['xAng'].append(imgAng_x)
-        self.ledData['yAng'].append(imgAng_y)
+        ledData['xAng'].append(imgAng_x)
+        ledData['yAng'].append(imgAng_y)
         
         crossLen = 4
-        cv2.line( self.img_dataPts, (round(imgPos_x-crossLen), round(imgPos_y)), (round(imgPos_x+crossLen), round(imgPos_y)), (0,0,255), 1)
-        cv2.line( self.img_dataPts, (round(imgPos_x), round(imgPos_y-crossLen)), (round(imgPos_x), round(imgPos_y+crossLen)), (0,0,255), 1)
+        cv2.line( self.img_dataPts, (round(imgPos_x-crossLen), round(imgPos_y)), (round(imgPos_x+crossLen), round(imgPos_y)), self.displayCol, 1)
+        cv2.line( self.img_dataPts, (round(imgPos_x), round(imgPos_y-crossLen)), (round(imgPos_x), round(imgPos_y+crossLen)), self.displayCol, 1)
     
     
         # print(f"imgPos_x:{imgPos_x}")
@@ -315,9 +237,56 @@ class webcam:
         self.vid_display = cv2.VideoWriter(f"data/vid/{self.vid_index}_{inStr}.avi", cv2.VideoWriter_fourcc(*'XVID'), 10, self.outputDimensions, True)
         # self.vid_display = cv2.VideoWriter(f"data/vid/{inStr}_{self.vid_index}.avi", cv2.VideoWriter_fourcc(*'MJPG'), 10, self.img_gray.size)
 
-    def readVectors(self):
+    def readVectors(self, fooRoverName):
         self.newClip('data')
 
+        fooRoverConfig = rc.rover_configSet[fooRoverName]
+        self.displayCol = rc.rover_displayColor[fooRoverName]
+
+        # Check to make sure Serial data
+        if not 'SerialComms' in fooRoverConfig:
+            print(f"ERROR: Called readVectors() on uninitialized rover")
+            return( np.array([]))
+        
+        # Load information from config for easier reference
+        
+        roverComms = fooRoverConfig['SerialComms']
+        self.LED_positions = fooRoverConfig['LED_positions'] # 3xN array of LED positions for processing
+        self.LED_count = len(self.LED_positions[0]) # Total number of LEDs
+
+        self.LED_hasBrightness = fooRoverConfig['LED_hasBrightness']
+        self.LED_brightness = fooRoverConfig['LED_brightness']
+
+        # Get easier array of mutually exclusive LEDs for each LED
+        self.LED_nonConsecutives = np.full((self.LED_count, self.LED_count), 0)
+        for fooExclusionSet in fooRoverConfig['LED_exclusionGroups']:
+            fooExclusionSetNP = np.array(fooExclusionSet)
+            for fooExclude in fooExclusionSetNP:
+                self.LED_nonConsecutives[fooExclude][fooExclusionSetNP] = 1
+
+        # Setup output dict for LED data
+        ledData = { 
+            'size': [], # Size of threshold area
+            'index': [], # Index of pixel
+            'brightness': [], # LED Brightness Setting
+            # LED Position in image (in pixels)
+            'xPix': [],
+            'yPix': [],
+            # LED vector angle (rad)
+            'xAng': [],
+            'yAng': [],
+            # LED XYZ Position on Lantern (mm)
+            'LED_X': [],
+            'LED_Y': [],
+            'LED_Z': [],
+        }
+        
+        # Save data from previous attempts
+        # Structure is [type of failure (str), size, brightness, number of areas]
+        self.failedAttempts = [[] for foo in range(self.LED_count)]
+        self.finishedLEDs = []
+
+        
         prevLED = -1
         currLED = 0
         # Loop until all LEDs are either measured or abandoned
@@ -339,7 +308,7 @@ class webcam:
 
 
             if len(potentials) == 0:
-                print(f"No Potentials, taking pic")
+                if self.doPrint: print(f"No Potentials, taking pic")
                 self.readImage()
                 self.updateDisplay()
                 currLED = -1
@@ -349,28 +318,33 @@ class webcam:
 
             if self.doPrint: print(f"Testing {str(currLED).ljust(4, ' ')}   ", end='')
 
-            self.roverComms.setLED(currLED, self.LED_brightness[currLED] )
+            # print(f"Setting {currLED} {self.LED_brightness}")
+            roverComms.setLED(currLED, self.LED_brightness )
             
             # Read and process image
             self.readImage()
-            processSuccess = self.processImg(currLED)
+            processSuccess = self.processImg(currLED, ledData)
 
             # If process did not succeed
             if not processSuccess:
                 attempt = self.failedAttempts[currLED][-1]
 
-                if len(self.failedAttempts[currLED]) >= MAX_ATTEMPTS:
-                    if currLED not in self.finishedLEDs: self.finishedLEDs.append(currLED)
-                    if self.doPrint: print("Abandoned ", end='')
+                if not self.LED_hasBrightness: # If no brightness control, always add to finished LEDs
+                    self.finishedLEDs.append(currLED)
+                
                 else:
-                    if self.doPrint: print("Failed    ", end='')
-
-                if self.doPrint: print(f"{attempt[0].ljust(20, ' ')}  {str(attempt[1]).ljust(5, ' ')}  {str(attempt[2]).ljust(5, ' ')}  {str(attempt[3]).ljust(5, ' ')} setting brightness to {self.LED_brightness[currLED]}")
-
+                    if len(self.failedAttempts[currLED]) >= MAX_ATTEMPTS:
+                        if currLED not in self.finishedLEDs: self.finishedLEDs.append(currLED)
+                        if self.doPrint: print("Abandoned ", end='')
+                    else:
+                        if self.doPrint: print("Failed    ", end='')
+    
+                    if self.doPrint: print(f"{attempt[0].ljust(20, ' ')}  {str(attempt[1]).ljust(5, ' ')}  {str(attempt[2]).ljust(5, ' ')}  {str(attempt[3]).ljust(5, ' ')} setting brightness to {self.LED_brightness}")
+    
 
             
             # Turn off LED
-            self.roverComms.setLED(currLED, 0 )
+            roverComms.setLED(currLED, 0 )
 
             # Display data
             self.updateDisplay()
@@ -397,10 +371,46 @@ class webcam:
         self.vid_index += 1
 
 
-        return(self.ledData)
-    
-    def getData(self):
-        return(self.ledData)
+
+        # Save LED brightness val to array    
+        if self.LED_hasBrightness: 
+            print(f"   Setting brightness to {self.LED_brightness}")
+            fooRoverConfig['LED_brightness'] = self.LED_brightness # Overwrite existing calibration value
+
+
+
+        # Remove any LED that is the only data point in its exclusion group
+        ledFoundIndices = np.array(ledData['index'])
+        ledDropIndices = []
+
+        
+        for fooExclusionSet in fooRoverConfig['LED_exclusionGroups']: # Iterate through each exclusion group
+            foundCount = 0
+            for checkIndex in fooExclusionSet: # Iterate through each LED in exclusion group
+                if checkIndex in ledFoundIndices: # If LED was found, add 1 to sum
+                    foundCount += 1
+            
+             # If we did not find at least 2 in exclusion group, add all LEDs in group to drop list
+            if foundCount > 0 and foundCount < 2:
+                for checkIndex in fooExclusionSet:
+                    ledDropIndices.append(checkIndex)
+
+        ledDropIndices = np.unique(np.array(ledDropIndices))
+
+        # Iterate over each saved LED and delete its data if in ledDropIndices
+        ii = 0
+        while ii < len(ledData['index']):
+            fooIndex = ledData['index'][ii]
+            if fooIndex in ledDropIndices:
+                for fooTag in ledData:
+                    del ledData[fooTag][ii]
+            else:
+                ii += 1
+
+        print(f"   Dropped Point: {ledDropIndices}")
+        print(f"   Found: {np.unique(np.array(ledData['index']))}\n")
+
+        return(ledData)
     
     def getFails(self):
         return(self.failedAttempts)

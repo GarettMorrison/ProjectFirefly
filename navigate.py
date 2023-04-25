@@ -28,9 +28,9 @@ ACCEPTABLE_WAYPOINT_DIST = 50 # Allowable error for waypoint to be considered fo
 
 
 # Rover Communication
-comms.initPortConnections()
+# comms.initPortConnections()
 
-# comms.initPortConnection('COM7') 
+comms.initPortConnection('COM7') 
 # # comms.initPortConnection(' COM8')
 # 
 # comms.initPortConnection(' COM9')
@@ -123,7 +123,7 @@ def getRoverPosition(fooRoverName):
         point_camXAngle = np.array(readDict['xAng'], dtype = np.double)
         point_camYAngle = np.array(readDict['yAng'], dtype = np.double)
 
-        if len(point_indices) < 5:
+        if len(point_indices) < 4:
             print(f"   Not enough points found for {fooRoverName}, continuing")
             return([1])
         
@@ -233,6 +233,15 @@ for fooWaypoint in waypointSet:
     # Convert 3D camera pos to 2D map position
     adjWaypoint = pf.getMotionBetween(fooWaypoint, startPos)
     adjustedWaypointSet.append([adjWaypoint[2], adjWaypoint[0], pf.motionToZAng(adjWaypoint)])
+
+# # Manually override waypoints
+# adjustedWaypointSet = [
+#     adjustedWaypointSet[0],
+#     [250, 300, 0],
+#     [150, 600, 0],
+#     [-150, 600, 0],
+#     [-250, 300, 0],
+# ]
 
 # Setup position sets for robots
 waypointSet = np.array(adjustedWaypointSet) # Convert to np array 

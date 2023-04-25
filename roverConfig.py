@@ -32,16 +32,16 @@ led_exclusion_WOOD = [
 ]
 
 led_exclusion_3DP = [
-    [0, 6],
-    [1, 7],
-    [2, 8],
-    [3, 9],
-    [4, 10],
-    [5, 11],
+    # [0, 6],
+    # [1, 7],
+    # [2, 8],
+    # [3, 9],
+    # [4, 10],
+    # [5, 11],
     
-    [0, 1],
-    [1, 2],
-    [0, 2],
+    # [0, 1],
+    # [1, 2],
+    # [0, 2],
 ]
 
 
@@ -53,7 +53,7 @@ test_parameters_WOOD = {
 }
 
 test_parameters_3DP = {
-    'acceptableError': 8,
+    'acceptableError': 12,
     'targetError': 2,
     'maxAttempts': 6,
 }
@@ -129,7 +129,7 @@ rover_steeringVals = {
         [0, 0.5, 0],
     ],
     'LIZA__': [
-        [0, 20, 0],
+        [0, 10, 0],
         [0, 0.5, 0],
     ],
 }

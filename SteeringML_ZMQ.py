@@ -17,12 +17,15 @@ PLOT_DATA = True
 MAX_DATA_HIST = 80
 MIN_DATA_PROC = 10
 
-MAX_RUN_DUR = 300
+MAX_RUN_DUR = 1000
 MIN_RUN_DUR = 5
-MAX_TURN_DUR = 150
+
+MIN_TURN_DUR = 15
+MAX_TURN_DUR = 250
+
 
 # MAX_TURNING_ANGLE = 0.75
-MAX_TURNING_ANGLE = 0.5
+MAX_TURNING_ANGLE = 0.75
 
 
 
@@ -55,6 +58,9 @@ def calcMotionDurs(currPos, targPos, steeringData):
 
     if abs(turnAngle) > MAX_TURNING_ANGLE:
         driveDur = 0
+    
+    if driveDur == 0 and abs(turnDur) < MIN_TURN_DUR:
+        turnDur = MIN_TURN_DUR*turnAngle/abs(turnAngle)
 
     return(turnDur, driveDur)
 
@@ -115,7 +121,7 @@ if __name__ == "__main__":
         metaData = np.frombuffer(data[doubleByteLen:], dtype=np.int32)
 
         position_start = positionData[:3]
-        position_end =positionData[3:]
+        position_end = positionData[3:]
 
         roverID = metaData[2]
 
@@ -168,12 +174,16 @@ if __name__ == "__main__":
                 distOut = m.sqrt(m.pow(fooDict['position_end'][ii][0]-fooDict['position_start'][ii][0], 2) + m.pow(fooDict['position_end'][ii][1]-fooDict['position_start'][ii][1], 2) )
                 distance.append(distOut)
 
-                angleOut = np.arctan2(fooDict['position_end'][ii][0]-fooDict['position_start'][ii][0], fooDict['position_end'][ii][1]-fooDict['position_start'][ii][1], ) - fooDict['position_start'][ii][2]
+                # angleOut = np.arctan2(fooDict['position_end'][ii][0]-fooDict['position_start'][ii][0], fooDict['position_end'][ii][1]-fooDict['position_start'][ii][1], ) - fooDict['position_start'][ii][2]
                 
+                angleOut = fooDict['position_end'][ii][2] - fooDict['position_start'][ii][2]
+
                 if angleOut > m.pi and fooDict["turn_duration"][ii] < 0: angleOut -= m.pi*2
                 if angleOut < -m.pi and fooDict["turn_duration"][ii] > 0: angleOut += m.pi*2
 
                 angle.append( angleOut)
+
+                if ii == len(fooDict['position_start'])-1: print(f"      angleOut:{angleOut}")
                 
                 relativeX.append(m.sin(angleOut)*distOut)
                 relativeY.append(m.cos(angleOut)*distOut)
@@ -203,7 +213,16 @@ if __name__ == "__main__":
             # Get subset of turn data in first and third quandrants, to remove over-rotated points
             durationSet = np.array( dataDict[fooRoverIndex]['turn_duration'] )
             angleSet = np.array( dataDict[fooRoverIndex]['netAngle'] )
-            sameSignIndices = np.append(np.intersect1d(np.where(durationSet > 0), np.where(angleSet > 0) ),   np.intersect1d(np.where(durationSet < 0), np.where(angleSet < 0) )   )
+            sameSignIndices = np.append(
+                np.append(
+                    np.intersect1d(np.where(durationSet > 0), np.where(angleSet > 0) ),   
+                    np.intersect1d(np.where(durationSet < 0), np.where(angleSet < 0) ),    
+                ),
+                np.where(np.abs(angleSet) < np.pi)
+            )
+
+
+
             durationSet = durationSet[sameSignIndices]
             angleSet = angleSet[sameSignIndices]
 
@@ -249,15 +268,15 @@ if __name__ == "__main__":
                     yPts = np.linspace(np.min(netDistSet), np.max(netDistSet))
                     ax[1].plot(distFit[0]*np.square(yPts) + distFit[1]*yPts + distFit[2], yPts)
                 
-            break
 
         if PLOT_DATA:
             plt.suptitle('Steering Calibration Machine Learning')
             ax[0].set_title('Turn Data')
             ax[0].set_xlabel('Turn Duration (mS)')
             ax[0].set_ylabel('Angle Change (RAD)')
-            ax[0].set_ylim(-np.pi, np.pi)
             ax[0].legend()
+            
+            # ax[0].set_ylim(-np.pi, np.pi)
             
             ax[1].set_title('Drive Data')
             ax[1].set_xlabel('Drive Duration (mS)')

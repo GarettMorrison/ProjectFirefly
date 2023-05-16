@@ -71,7 +71,7 @@ while False:
 
 
 # Webcam communication
-webcamComms = webcam()
+webcamComms = webcam( _doPrint = True, _doVisOut = True )
 webcamComms.updateDisplay()
 
 # ZMQ Communication to WSL Data processing script
@@ -407,6 +407,8 @@ while True:
         
         # Get current rover position
         currPos = getRoverPosition(roverName)
+        # exit()
+        
         if len(currPos) < 6: continue # If returned array has len < 6 position was not found
         print(f"   {roverName} Absolute Pos: {currPos}")
         

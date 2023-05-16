@@ -7,6 +7,8 @@ import imageio
 from copy import deepcopy
 import random
 import statistics as st
+import os
+
 
 
 # If this file is run as main, show video with center crosshair for camera calibration
@@ -86,8 +88,9 @@ def edge_filter(img):
 
 
 class webcam:
-    def __init__(self, _doPrint = False):
+    def __init__(self, _doPrint = False, _doVisOut = False):
         self.doPrint = _doPrint 
+        self.doVisOut = _doVisOut 
         self.displayCol = (255, 255, 255)
         # Load and configure camera data                
         inFile =  open('camera_calibration/cameraCal.yaml', 'rb')
@@ -120,7 +123,16 @@ class webcam:
         self.vid_display = cv2.VideoWriter(f"data/vid/{0}_fill.avi", cv2.VideoWriter_fourcc(*'XVID'), 10, self.outputDimensions, True)
         self.vid_index = 1
 
+        # Set up output folders:
+        if self.doVisOut: # Save images
+            if not os.path.exists("animation/raw/webcam/raw/"): os.makedirs("animation/raw/webcam/raw")
+            if not os.path.exists("animation/raw/webcam/unDist/"): os.makedirs("animation/raw/webcam/unDist")
+            if not os.path.exists("animation/raw/webcam/gray/"): os.makedirs("animation/raw/webcam/gray")
+            if not os.path.exists("animation/raw/webcam/subtract/"): os.makedirs("animation/raw/webcam/subtract")
+            if not os.path.exists("animation/raw/webcam/thresh/"): os.makedirs("animation/raw/webcam/thresh")
+            if not os.path.exists("animation/raw/webcam/dataPts/"): os.makedirs("animation/raw/webcam/dataPts")
 
+    # Request photo from camera and remove distortion
     def takePhoto(self):
         result, self.img = self.cam.read()
         self.img_unDist = cv2.undistort(self.img, self.Camera_Matrix, self.Distortion_Coefficients, None, self.newcameramtx)
@@ -230,6 +242,22 @@ class webcam:
         self.finishedLEDs.append(ledIndex)
         # print(f"Success {len(self.ledData['LED_X'])} {' '.ljust(80)} xAng:{round(imgAng_x,2)}   yAng:{round(imgAng_y,2)}   img_s:{round(imgPos_s,2)}")
         
+        if self.doVisOut: # Save images
+            pointIndexStr = str(len(ledData['size'])).rjust(3, '0')
+            cv2.imwrite(f"animation/raw/webcam/raw/{pointIndexStr}.png", self.img)
+            cv2.imwrite(f"animation/raw/webcam/unDist/{pointIndexStr}.png", self.img_unDist)
+            cv2.imwrite(f"animation/raw/webcam/gray/{pointIndexStr}.png", self.img_gray)
+            cv2.imwrite(f"animation/raw/webcam/subtract/{pointIndexStr}.png", self.img_subtract)
+            cv2.imwrite(f"animation/raw/webcam/thresh/{pointIndexStr}.png", self.img_thresh)
+            cv2.imwrite(f"animation/raw/webcam/dataPts/{pointIndexStr}.png", self.img_dataPts)
+            
+            
+            
+            
+            
+            
+
+
         return(True)
      
     def newClip(self, inStr):
@@ -237,6 +265,7 @@ class webcam:
         self.vid_display = cv2.VideoWriter(f"data/vid/{self.vid_index}_{inStr}.avi", cv2.VideoWriter_fourcc(*'XVID'), 10, self.outputDimensions, True)
         # self.vid_display = cv2.VideoWriter(f"data/vid/{inStr}_{self.vid_index}.avi", cv2.VideoWriter_fourcc(*'MJPG'), 10, self.img_gray.size)
 
+    # Get set of vectors from the camera to each LED by requesting each one individually and processing photos
     def readVectors(self, fooRoverName):
         self.newClip('data')
 
@@ -412,6 +441,8 @@ class webcam:
 
         return(ledData)
     
+
+
     def getFails(self):
         return(self.failedAttempts)
 
@@ -419,20 +450,8 @@ class webcam:
     # def saveGif(self, fileName):
     #     imageio.mimsave(fileName, self.imagelist, fps=0.5)       
 
+    # Update display of current images and data
     def updateDisplay(self):
-        # self.img_posOverLay = deepcopy(self.img_unDist)
-        # self.img_points = np.zeros_like(self.img)
-        # for ii in range(len(self.ledData['xPix'])):
-        #     xPix = round(self.ledData['xPix'][ii])
-        #     yPix = round(self.ledData['yPix'][ii])
-        #     pltRad = round(self.ledData['size'][ii]/30)
-        #     # cv2.circle( self.img_points, (xPix, yPix), pltRad, (0,0,255), 1)
-            
-        #     crossLen = 4
-        #     cv2.line( self.img_posOverLay, (xPix-crossLen, yPix), (xPix+crossLen, yPix), (0,0,255), 1)
-        #     cv2.line( self.img_posOverLay, (xPix, yPix-crossLen), (xPix, yPix+crossLen), (0,0,255), 1)
-        
-        # self.img_gray = cv2.cvtColor(self.img_gray, cv2.COLOR_GRAY2BGR)
         display_thresh = cv2.cvtColor(self.img_thresh, cv2.COLOR_GRAY2BGR)
         display_subtract = cv2.cvtColor(self.img_subtract, cv2.COLOR_GRAY2BGR)
 
@@ -441,6 +460,7 @@ class webcam:
         cv2.imshow('Display', outImage)
         self.vid_display.write(outImage)
 
+    # Update display of raw image and previous data points
     def updateJustImg(self):
         zeroImg = np.zeros_like(self.img)
         outImage = adjacentImages( [[self.img_unDist, self.img_dataPts], [zeroImg, zeroImg]] )

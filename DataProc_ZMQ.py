@@ -11,6 +11,7 @@ import roverConfig as rc
 import swig.FastFireFly as FFF
 
 DO_FILEOUT = False
+DO_REGRESSION_DATA_OUTPUT = True
 CHECK_DUR = 0.5
 
 
@@ -49,25 +50,101 @@ def calculatePosition(roverID, ptIndex, point_camXAngle, point_camYAngle):
     else:
         prevMotion = defaultPosition
 
-    print(f"Starting Localization")
-    # Actually call localization
-    localization = FFF.ledLocalizationFast(lanternPointSet, prevMotion)
-    motion_best = localization.fitData_imageCentric(ptAngs, ptIndex.tolist(), 1000)
-    motion_best = localization.fitData_3D(ptAngs, ptIndex.tolist(), 10000)
-    
-    DataProc_config = rc.rover_configSet[roverIDname]['DataProc_config']
-    acceptableError = DataProc_config['acceptableError']
-    targetError = DataProc_config['targetError']
-    maxAttempts = DataProc_config['maxAttempts']
-    
-    testAttempts = 0
 
-    while localization.getError()/ptCount > targetError and testAttempts < maxAttempts:
-        print(f"Error > {targetError}: {localization.getError()/ptCount}")
-        motion_best = localization.fitData_3D(ptAngs, ptIndex.tolist(), 50000)
-        testAttempts += 1
+    if DO_REGRESSION_DATA_OUTPUT:
+        print(f"Starting Localization with Regression Data Output")
+        # Actually call localization
+        localization = FFF.ledLocalizationFast(lanternPointSet, prevMotion)
+        motion_best = localization.fitData_3D(ptAngs, ptIndex.tolist(), 100)
 
-    prevMotion = motion_best
+        motionSaveSet = [motion_best]
+        improvementSteps = [0]
+        errorSteps = [localization.getError()/ptCount]
+        
+        DataProc_config = rc.rover_configSet[roverIDname]['DataProc_config']
+        acceptableError = DataProc_config['acceptableError']
+        targetError = DataProc_config['targetError']
+        maxAttempts = DataProc_config['maxAttempts']
+        
+        netTestAttempts = 0
+        testAttempts = 0
+        while localization.getError()/ptCount > targetError and testAttempts < 10:
+            motion_best = localization.fitData_3D(ptAngs, ptIndex.tolist(), 10)
+            testAttempts += 1
+            netTestAttempts += 1
+            
+            if motion_best != motionSaveSet[-1]:
+                currError = localization.getError()/ptCount
+                print(f"Error > {targetError}: {currError}")
+                motionSaveSet.append(motion_best)
+                improvementSteps.append(netTestAttempts)
+                errorSteps.append(currError)
+          
+        testAttempts = 0      
+        while localization.getError()/ptCount > targetError and testAttempts < 100:
+            motion_best = localization.fitData_3D(ptAngs, ptIndex.tolist(), 100)
+            testAttempts += 1
+            netTestAttempts += 1
+            
+            if motion_best != motionSaveSet[-1]:
+                currError = localization.getError()/ptCount
+                print(f"Error > {targetError}: {currError}")
+                motionSaveSet.append(motion_best)
+                improvementSteps.append(netTestAttempts)
+                errorSteps.append(currError)
+
+        testAttempts = 0
+        while localization.getError()/ptCount > targetError and testAttempts < 5000:
+            motion_best = localization.fitData_3D(ptAngs, ptIndex.tolist(), 1000)
+            testAttempts += 1
+            netTestAttempts += 1
+            
+            if motion_best != motionSaveSet[-1]:
+                currError = localization.getError()/ptCount
+                print(f"Error > {targetError}: {currError}")
+                motionSaveSet.append(motion_best)
+                improvementSteps.append(netTestAttempts)
+                errorSteps.append(currError)
+        
+
+
+
+        pklDict = {
+            'motion': motionSaveSet,
+            'step': improvementSteps,
+            'error':errorSteps,
+            'ptIndex':ptIndex,
+            'camXAngle':point_camXAngle,
+            'camYAngle':point_camYAngle,
+        }
+
+        pklOut = open("data/regressionData.pkl", 'wb')
+        pkl.dump(pklDict, pklOut)
+        pklOut.close()
+
+        prevMotion = motion_best
+
+
+    else:
+        print(f"Starting Localization")
+        # Actually call localization
+        localization = FFF.ledLocalizationFast(lanternPointSet, prevMotion)
+        motion_best = localization.fitData_imageCentric(ptAngs, ptIndex.tolist(), 1000)
+        motion_best = localization.fitData_3D(ptAngs, ptIndex.tolist(), 10000)
+        
+        DataProc_config = rc.rover_configSet[roverIDname]['DataProc_config']
+        acceptableError = DataProc_config['acceptableError']
+        targetError = DataProc_config['targetError']
+        maxAttempts = DataProc_config['maxAttempts']
+        
+        testAttempts = 0
+
+        while localization.getError()/ptCount > targetError and testAttempts < maxAttempts:
+            print(f"Error > {targetError}: {localization.getError()/ptCount}")
+            motion_best = localization.fitData_3D(ptAngs, ptIndex.tolist(), 50000)
+            testAttempts += 1
+
+        prevMotion = motion_best
 
 
 

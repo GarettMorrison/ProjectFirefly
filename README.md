@@ -21,7 +21,7 @@ Plots waypoints and rover motion over time.
 Records and processes motion history. Finds relationship between rover commands and actual motion and sends improved system back to navigate.py. 
 
 ## Camera Calibration
-Firefly uses the default OpenCV2 camera calibration system. Start by printing off camera_calibration\calibrationCheckerBoard.pdf and taping it to something flat. Run camera_calibration\calibrateCamera.py with the camera connected. Take several images of the checkerboard at different angles by pressing space. Press escape to process and save the calibration data. This is saved to camera_calibration\cameraCal.yaml for later use. 
+Firefly uses the default OpenCV2 camera calibration system. Start by printing off calibrationCheckerBoard.pdf and taping it to something flat. Run calibrateCamera.py with the camera connected. Take several images of the checkerboard at different angles by pressing space. Press escape to process and save the calibration data. This is saved to cameraCal.yaml for later use. 
 
 ## Getting Started
 I would recommend building the wooden rover. It is laser cut out of 3mm material, and the files are available in /CAD. The wiring information can be found on page 56 of FireFly_Technical_Report.pdf. We use Platformio to flash the Arduino, although the default IDE should work as well. 

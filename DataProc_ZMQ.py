@@ -1,3 +1,4 @@
+# Only works on Linux or WSL
 import os
 import pickle as pkl
 import numpy as np

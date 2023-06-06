@@ -12,7 +12,6 @@ import roverConfig as rc
 
 
 
-
 PLOT_DATA = True
 MAX_DATA_HIST = 80
 MIN_DATA_PROC = 10

@@ -1,14 +1,14 @@
 #include <Arduino.h>
 
-// // Uncomment one of these to flash this specific rover
+// // Uncomment one of these to specify which rover is being flashed
 // const char ROVER_ID[] =  "TATE__";
 // #include "StandardLEDS.h"
 
-const char ROVER_ID[] =  "LIZA__";
-#include "StandardLEDS.h"
+// const char ROVER_ID[] =  "LIZA__";
+// #include "StandardLEDS.h"
 
-// static char ROVER_ID[] =  "BROCK_";
-// #include "LED_Strips.h"
+static char ROVER_ID[] =  "BROCK_";
+#include "LED_Strips.h"
 
 #define COLLISION_DISTANCE 100 // Distance to stop to prevent collisions
 

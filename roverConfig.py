@@ -1,14 +1,14 @@
-# Define configurations for various rovers
+# Define configuration data for the different rovers
+# Each rover has a different name, uncomment corresponding section in arduino\src\main.cpp
+# There are two different configurations supported: 3DP and WOOD
+
 import numpy as np
 from copy import deepcopy
 
 
-# Define XYZ Position sets for various lantern layouts
-# lantern_X_3DP =  [ 60.10456705, -80.93500398, 13.90925146, -15.90356982, -54.8012229, 75.85042568, 49.49787875, -67.61465994, 18.11678119, -20.64195979, -44.1945346, 58.99253963 ]
-# lantern_Y_3DP =  [ 15, 15, 15, 30, 30, 30, 45, 45, 45, 60, 60, 60 ]
-# lantern_Z_3DP =  [ 60.10358575, 25.97162163, -83.85423498, 75.85068534, -54.80032818, -15.90480822, 49.49707061, 18.11788512, -67.61495574, 58.99287665, -44.19381305, -20.64292295 ]
 
-lantern_3DP_colorCode = [ (255, 0, 0), (255, 0, 43), (255, 0, 85), (255, 0, 128), (255, 0, 170), (255, 0, 213), (255, 0, 255), (213, 0, 255), (170, 0, 255), (128, 0, 255), (85, 0, 255), (43, 0, 255), (0, 0, 255), (0, 43, 255), (0, 85, 170), (0, 128, 128), (0, 170, 85), (0, 213, 43), (0, 255, 0), ]
+
+# Define XYZ position of each LED relative to base point of lantern
 
 lantern_X_3DP =  [ 60.10456705, -80.93500398, 13.90925146, -15.90356982, -54.8012229, 75.85042568, 49.49787875, -67.61465994, 18.11678119, -20.64195979, -44.1945346, 58.99253963 ]
 lantern_Y_3DP =  [ 15, 15, 15, 30, 30, 30, 45, 45, 45, 60, 60, 60 ]
@@ -18,7 +18,6 @@ lantern_Z_3DP =  [ 60.10358575, 25.97162163, -83.85423498, 75.85068534, -54.8003
 lantern_X_WOOD = [ 0, 0, 0, 28.14582562, 39.80420832, 48.75, 48.75, 39.80420832, 28.14582562, 0, 0, 0, -48.75, -39.80420832, -28.14582562, -28.14582562, -39.80420832, -48.75 ]
 lantern_Y_WOOD = [ 32.5, 45.96194078, 56.29165125, 56.29165125, 45.96194078, 32.5, 32.5, 45.96194078, 56.29165125, 56.29165125, 45.96194078, 32.5, 32.5, 45.96194078, 56.29165125, 56.29165125, 45.96194078, 32.5 ]
 lantern_Z_WOOD = [ -56.29165125, -45.96194078, -32.5, -16.25, -22.98097039, -28.14582562, 28.14582562, 22.98097039, 16.25, 32.5, 45.96194078, 56.29165125, 28.14582562, 22.98097039, 16.25, -16.25, -22.98097039, -28.14582562 ]
-
 
 # Define exclusion sets for various layouts
 # Each list of points specifies a group of LEDs (by index) that cannot be flashed consecutively
@@ -135,6 +134,7 @@ rover_steeringVals = {
     ],
 }
 
-
-# nameserver for windows, cat /etc/resolv.conf
+# LOCALHOST_NAME_SERVER will need to be updated to match your localhost nameserver
+# This is required for ZMQ to work across WSL and windows
+# Past "cat /etc/resolv.conf" to get name server and paste here on reboot
 LOCALHOST_NAME_SERVER = "172.31.160.1"

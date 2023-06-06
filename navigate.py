@@ -28,10 +28,12 @@ ACCEPTABLE_WAYPOINT_DIST = 50 # Allowable error for waypoint to be considered fo
 
 
 # Rover Communication
-# comms.initPortConnections()
+comms.initPortConnections()
 
-comms.initPortConnection('COM7') 
-# # comms.initPortConnection(' COM8')
+
+# # Uncomment if you want to specify which com port and not wait for all the ports to be checked every time
+# comms.initPortConnection('COM7') 
+# comms.initPortConnection(' COM8')
 # 
 # comms.initPortConnection(' COM9')
 # comms.initPortConnection(' COM10')
@@ -43,7 +45,7 @@ if len(comms.connectedRovers) < 1:
     exit()
 
 
-
+# Set to true to test motors
 while False:
     for roverName in comms.connectedRovers: 
         fooSerialComms = rc.rover_configSet[roverName]['SerialComms']    
